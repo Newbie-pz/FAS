@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+.env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+
+# Model checkpoints
+checkpoints/
+checkpoint/
+*.pth
+*.pt
+*.ckpt
+
+# Logs / cache
+logs/
+log/
+runs/
+wandb/
+*.log
+
+# Temporary files
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Archives
+*.zip
+*.rar
+*.tar
+*.tar.gz
+ProcessedData/
