@@ -26,7 +26,7 @@ def parse_args():
     p.add_argument('--seed', type=int, default=42)
     p.add_argument('--image_size', type=int, default=224)
     p.add_argument('--patience', type=int, default=5)
-    p.add_argument('--augmentation', choices=['baseline', 'strong'], default='baseline')
+    p.add_argument('--augmentation', choices=['baseline', 'strong', 'appearance'], default='baseline')
     p.add_argument('--no_pretrained', action='store_true')
     p.add_argument('--live_keywords', nargs='+', default=['live','real','genuine','positive'])
     p.add_argument('--spoof_keywords', nargs='+', default=['spoof','attack','fake','negative'])
@@ -82,31 +82,13 @@ def main():
         image_size=args.image_size,
         augmentation=args.augmentation,
     )
-    val_ds = FASImageDataset(val_s, train=False, image_size=args.image_size)
-    test_ds = FASImageDataset(test_s, train=False, image_size=args.image_size)
+    val_ds = FASImageDataset(train=False, samples=val_s, image_size=args.image_size)
+    test_ds = FASImageDataset(train=False, samples=test_s, image_size=args.image_size)
 
     pin_memory = torch.cuda.is_available()
-    train_loader = DataLoader(
-        train_ds,
-        batch_size=args.batch_size,
-        shuffle=True,
-        num_workers=args.num_workers,
-        pin_memory=pin_memory,
-    )
-    val_loader = DataLoader(
-        val_ds,
-        batch_size=args.batch_size,
-        shuffle=False,
-        num_workers=args.num_workers,
-        pin_memory=pin_memory,
-    )
-    test_loader = DataLoader(
-        test_ds,
-        batch_size=args.batch_size,
-        shuffle=False,
-        num_workers=args.num_workers,
-        pin_memory=pin_memory,
-    )
+    train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, pin_memory=pin_memory)
+    val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, pin_memory=pin_memory)
+    test_loader = DataLoader(test_ds, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, pin_memory=pin_memory)
 
     model = build_resnet18(pretrained=not args.no_pretrained).to(device)
     criterion = nn.CrossEntropyLoss()
@@ -119,13 +101,7 @@ def main():
         tr_loss, tr_acc, _, _ = run_epoch(model, train_loader, criterion, optimizer, device, True)
         with torch.no_grad():
             va_loss, va_acc, _, _ = run_epoch(model, val_loader, criterion, optimizer, device, False)
-        row = {
-            'epoch': epoch,
-            'train_loss': tr_loss,
-            'train_acc': tr_acc,
-            'val_loss': va_loss,
-            'val_acc': va_acc,
-        }
+        row = {'epoch': epoch, 'train_loss': tr_loss, 'train_acc': tr_acc, 'val_loss': va_loss, 'val_acc': va_acc}
         history.append(row)
         print(row)
         if va_loss < best_val_loss:
