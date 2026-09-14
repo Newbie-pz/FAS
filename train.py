@@ -26,6 +26,7 @@ def parse_args():
     p.add_argument('--seed', type=int, default=42)
     p.add_argument('--image_size', type=int, default=224)
     p.add_argument('--patience', type=int, default=5)
+    p.add_argument('--augmentation', choices=['baseline', 'strong'], default='baseline')
     p.add_argument('--no_pretrained', action='store_true')
     p.add_argument('--live_keywords', nargs='+', default=['live','real','genuine','positive'])
     p.add_argument('--spoof_keywords', nargs='+', default=['spoof','attack','fake','negative'])
@@ -67,19 +68,45 @@ def main():
     with open(out / 'split_summary.json', 'w', encoding='utf-8') as f:
         json.dump({
             'dataset': args.dataset,
+            'augmentation': args.augmentation,
             'total_images': len(samples),
             'train_images': len(train_s), 'val_images': len(val_s), 'test_images': len(test_s),
             'train_groups': len(set(x[2] for x in train_s)),
             'val_groups': len(set(x[2] for x in val_s)),
             'test_groups': len(set(x[2] for x in test_s)),
-        }, f, indent=2)
+        }, f, ensure_ascii=False, indent=2)
 
-    train_ds = FASImageDataset(train_s, train=True, image_size=args.image_size)
+    train_ds = FASImageDataset(
+        train_s,
+        train=True,
+        image_size=args.image_size,
+        augmentation=args.augmentation,
+    )
     val_ds = FASImageDataset(val_s, train=False, image_size=args.image_size)
     test_ds = FASImageDataset(test_s, train=False, image_size=args.image_size)
-    train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, pin_memory=True)
-    val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, pin_memory=True)
-    test_loader = DataLoader(test_ds, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, pin_memory=True)
+
+    pin_memory = torch.cuda.is_available()
+    train_loader = DataLoader(
+        train_ds,
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=args.num_workers,
+        pin_memory=pin_memory,
+    )
+    val_loader = DataLoader(
+        val_ds,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=args.num_workers,
+        pin_memory=pin_memory,
+    )
+    test_loader = DataLoader(
+        test_ds,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=args.num_workers,
+        pin_memory=pin_memory,
+    )
 
     model = build_resnet18(pretrained=not args.no_pretrained).to(device)
     criterion = nn.CrossEntropyLoss()
@@ -92,7 +119,13 @@ def main():
         tr_loss, tr_acc, _, _ = run_epoch(model, train_loader, criterion, optimizer, device, True)
         with torch.no_grad():
             va_loss, va_acc, _, _ = run_epoch(model, val_loader, criterion, optimizer, device, False)
-        row = {'epoch': epoch, 'train_loss': tr_loss, 'train_acc': tr_acc, 'val_loss': va_loss, 'val_acc': va_acc}
+        row = {
+            'epoch': epoch,
+            'train_loss': tr_loss,
+            'train_acc': tr_acc,
+            'val_loss': va_loss,
+            'val_acc': va_acc,
+        }
         history.append(row)
         print(row)
         if va_loss < best_val_loss:
@@ -106,13 +139,14 @@ def main():
                 break
 
     with open(out / 'history.json', 'w', encoding='utf-8') as f:
-        json.dump(history, f, indent=2)
+        json.dump(history, f, ensure_ascii=False, indent=2)
 
     ckpt = torch.load(out / 'best.pth', map_location=device)
     model.load_state_dict(ckpt['model'])
     with torch.no_grad():
         _, _, y_true, y_score = run_epoch(model, test_loader, criterion, optimizer, device, False)
     metrics = save_plots_and_metrics(y_true, y_score, out, prefix='test')
+    metrics['augmentation'] = args.augmentation
     print('Test metrics:', metrics)
 
 
