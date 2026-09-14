@@ -112,7 +112,7 @@ def split_by_group(samples, seed=42, train_ratio=0.7, val_ratio=0.15):
 
 
 def build_train_transform(image_size: int, augmentation: str):
-    """Build the training transform used by the baseline or week-3 generalization experiment."""
+    """Build training transforms for baseline and week-3 generalization experiments."""
     if augmentation == 'baseline':
         return transforms.Compose([
             transforms.Resize((image_size, image_size)),
@@ -150,6 +150,30 @@ def build_train_transform(image_size: int, augmentation: str):
                 ratio=(0.3, 3.3),
                 value='random',
             ),
+        ])
+
+    if augmentation == 'appearance':
+        # 侧重外观与成像风格随机化，同时保留完整人脸区域和细粒度纹理。
+        # 相比 strong，不使用 RandomResizedCrop 和 RandomErasing，避免破坏 FAS 纹理线索。
+        return transforms.Compose([
+            transforms.Resize((image_size, image_size)),
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomApply([
+                transforms.ColorJitter(
+                    brightness=0.35,
+                    contrast=0.35,
+                    saturation=0.30,
+                    hue=0.05,
+                )
+            ], p=0.80),
+            transforms.RandomGrayscale(p=0.10),
+            transforms.RandomAutocontrast(p=0.15),
+            transforms.RandomApply([
+                transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 1.0))
+            ], p=0.15),
+            transforms.RandomAdjustSharpness(sharpness_factor=0.6, p=0.10),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
         ])
 
     raise ValueError(f'Unsupported augmentation mode: {augmentation}')
