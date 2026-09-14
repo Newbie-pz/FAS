@@ -109,6 +109,76 @@ outputs_cross/
 
 ---
 
+## 第三周：泛化增强实验
+
+第三周在保持 ResNet18、Subject-disjoint 数据划分、优化器、训练超参数以及 Source-only 跨数据集评价协议不变的前提下，只修改训练阶段的数据增强策略，从而验证更强的数据扰动能否降低模型对单一源域外观统计特征的依赖，并提升跨数据集泛化能力。
+
+### 强数据增强策略
+
+第三周新增 `augmentation=strong`。训练阶段在 Baseline 的基础上使用更强的随机扰动：
+
+- `RandomResizedCrop`：随机改变裁切区域与局部尺度；
+- `RandomHorizontalFlip`：随机水平翻转；
+- `ColorJitter`：增强亮度、对比度、饱和度与色调变化；
+- `RandomGrayscale`：随机灰度化，降低模型对固定颜色分布的依赖；
+- `GaussianBlur`：模拟成像模糊与不同清晰度；
+- `RandomErasing`：随机遮挡局部区域，抑制模型过度依赖单一区域纹理。
+
+验证集、同域测试集和跨域目标数据均不使用随机增强，保证评价协议与第一、二周一致。
+
+### 第三周待运行实验
+
+| 实验编号 | 训练数据集 | 测试数据集 | 模型 | 增强方式 | Accuracy | AUC | EER | 备注 |
+|---|---|---|---|---|---:|---:|---:|---|
+| W3-OULU-OULU-STRONG-001 | OULU-NPU | OULU-NPU | ResNet18 | Strong Augmentation | 待运行 | 待运行 | 待运行 | 同域测试 |
+| W3-OULU-CASIA-STRONG-001 | OULU-NPU | CASIA | ResNet18 | Strong Augmentation | 待运行 | 待运行 | 待运行 | Source-only |
+| W3-OULU-MSU-STRONG-001 | OULU-NPU | MSU-MFSD | ResNet18 | Strong Augmentation | 待运行 | 待运行 | 待运行 | Source-only |
+| W3-OULU-REPLAY-STRONG-001 | OULU-NPU | Replay-Attack | ResNet18 | Strong Augmentation | 待运行 | 待运行 | 待运行 | Source-only |
+
+### 第三周评价重点
+
+第三周不能只观察同域 Accuracy。最关键的判断依据是第二周跨域 Baseline 与第三周 Strong Augmentation 的对比：
+
+1. 跨域 AUC 是否整体提高；
+2. 跨域 EER 是否整体下降；
+3. Accuracy 是否在多数目标域上提升；
+4. 同域性能是否出现可接受范围内的下降；
+5. 泛化提升是否具有一致性，而不是只对单个目标数据集有效。
+
+如果增强后同域 Accuracy 略微下降，但多个目标域的 AUC 提高、EER 降低，则说明模型牺牲了部分源域拟合能力，换取了更好的域外泛化能力，这种变化通常更符合第三周实验目标。
+
+### 第三周运行方式
+
+```bash
+bash scripts/run_week3_generalization.sh
+```
+
+训练模型默认保存于：
+
+```text
+outputs_week3/strong/OULU-NPU/
+```
+
+跨域结果默认保存于：
+
+```text
+outputs_week3_cross/strong/
+```
+
+全部实验完成后，可生成第二周 Baseline 与第三周 Strong Augmentation 的差值对比：
+
+```bash
+python compare_week3_results.py
+```
+
+输出：
+
+```text
+outputs_week3_cross/strong/week3_comparison.md
+```
+
+---
+
 ## 后续实验记录模板
 
 | 实验编号 | 训练数据集 | 测试数据集 | 模型 | 方法/改动 | Accuracy | AUC | EER | 备注 |
