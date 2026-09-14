@@ -54,7 +54,7 @@ ProcessedData/
 当前主体 ID 提取逻辑如下：
 
 - OULU-NPU：从文件名中提取 Subject 编号，例如 `1_1_01_1_frame00000.jpg` 中的 `01`；
-- MSU-MFSD：提取 `clientXXX`，例如 `real_client026_android_SD_scene01_frame00190.jpg` 中的 `client026`；
+- MSU-MFSD：提取 `clientXXX`；
 - Replay-Attack：提取 `clientXXX`；
 - CASIA：根据文件名中的训练/测试前缀和人物编号构造主体分组。
 
@@ -98,9 +98,7 @@ ResNet18
 Live / Spoof
 ```
 
-ResNet18 使用残差连接缓解深层网络优化困难，相比更大型网络参数量和计算量较低，适合作为本项目统一 Baseline。
-
-默认使用 ImageNet 预训练权重，然后将最后的分类层替换为两个输出节点。
+默认使用 ImageNet 预训练权重，并将最后的分类层替换为两个输出节点。
 
 ## 五、图像预处理与数据增强
 
@@ -112,7 +110,7 @@ ResNet18 使用残差连接缓解深层网络优化困难，相比更大型网�
 - ToTensor；
 - ImageNet Normalize。
 
-验证和测试阶段不使用随机增强，只进行 Resize、ToTensor 和 Normalize，从而保证评价过程确定且可复现。
+验证和测试阶段不使用随机增强，只进行 Resize、ToTensor 和 Normalize。
 
 主要参数如下：
 
@@ -124,9 +122,7 @@ ResNet18 使用残差连接缓解深层网络优化困难，相比更大型网�
 
 ## 六、训练策略
 
-当前训练阶段使用交叉熵损失进行二分类优化，并使用 AdamW 优化器。
-
-默认参数如下：
+当前训练阶段使用交叉熵损失和 AdamW 优化器。
 
 | 参数 | 数值 |
 |---|---|
@@ -138,72 +134,122 @@ ResNet18 使用残差连接缓解深层网络优化困难，相比更大型网�
 | `seed` | `42` |
 | `optimizer` | `AdamW` |
 
-训练过程中每个 epoch 统计训练损失、训练 Accuracy、验证损失和验证 Accuracy。程序根据验证集表现保存最佳模型，并使用 Early Stopping 避免无意义的持续训练。
+训练过程中每个 epoch 统计训练损失、训练 Accuracy、验证损失和验证 Accuracy。程序根据验证集表现保存最佳模型，并使用 Early Stopping。
 
 ## 七、评价指标
 
-当前项目输出 Accuracy、AUC、EER、ROC Curve 和 Confusion Matrix。
+当前项目统一输出 Accuracy、AUC、EER、ROC Curve 和 Confusion Matrix。
 
 ### Accuracy
 
-Accuracy 表示固定分类阈值下预测正确的样本比例。当前默认使用 `threshold = 0.5`。
+Accuracy 表示固定分类阈值下预测正确的样本比例，当前默认使用 `threshold = 0.5`。
 
 ### AUC
 
-AUC 为 ROC 曲线下面积，用于衡量模型在不同分类阈值下区分 Live 与 Spoof 的整体能力。AUC 越接近 1，说明两类样本的预测分数整体可分性越强。
-
-本项目统一使用 Live 类作为正类，并使用 Live 类预测概率计算 AUC。
+AUC 为 ROC 曲线下面积，用于衡量模型在不同分类阈值下区分 Live 与 Spoof 的整体能力。本项目统一使用 Live 类作为正类，并使用 Live 类预测概率计算 AUC。
 
 ### EER
 
-EER 为 Equal Error Rate，即错误接受率与错误拒绝率相等附近对应的错误率。EER 越低通常表示模型性能越好。
-
-程序同时记录对应的 `eer_threshold`，用于观察 EER 工作点对应的分类阈值。
+EER 为 Equal Error Rate，即错误接受率与错误拒绝率相等附近对应的错误率。程序同时记录 `eer_threshold`。
 
 ### ROC Curve
 
-ROC 曲线展示不同阈值下真正率与假正率之间的关系，用于分析模型整体判别能力。
+ROC 曲线展示不同阈值下真正率与假正率之间的关系。
 
 ### Confusion Matrix
 
-混淆矩阵用于分别观察 Spoof 和 Live 的正确分类与错误分类数量，便于判断模型错误主要来自哪一类样本。
+混淆矩阵用于观察 Spoof 和 Live 的正确分类与错误分类数量。
 
-## 八、第一周正式 Baseline 结果
+## 八、第一周：同域 Baseline
 
-当前正式结果采用 OULU-NPU 的 Subject-disjoint 划分，不采用早期 Video-level 划分得到的 100% 结果。
+第一周正式结果采用 OULU-NPU 的 Subject-disjoint 划分：
 
 | 数据集 | 模型 | 划分方式 | Accuracy | AUC | EER |
 |---|---|---|---:|---:|---:|
 | OULU-NPU | ResNet18 | Subject-disjoint 70/15/15 | 99.8161% | 99.9999% | 0.0526% |
 
-测试集混淆矩阵：
+混淆矩阵：
 
 | 真实类别 | 预测 Spoof | 预测 Live |
 |---|---:|---:|
 | Spoof | 7609 | 21 |
 | Live | 0 | 3787 |
 
-本次共测试 11417 张图像，其中 21 个 Spoof 样本被误判为 Live，其余样本分类正确。
+该结果说明模型在 OULU-NPU 同域条件下具有很强的判别能力，但这并不能代表模型具有同样强的跨数据集泛化能力。
 
-详细实验记录见：[`EXPERIMENT_RESULTS.md`](EXPERIMENT_RESULTS.md)。
+## 九、第二周：跨数据集泛化实验
 
-## 九、结果分析时需要注意的问题
+第二周的核心任务是固定第一周训练得到的源模型，直接到完全未参与训练的目标数据集上测试。目标数据集不得用于训练、微调或参数更新。
 
-当前结果属于同数据集、同域条件下的测试。虽然 Train、Validation 和 Test 的 Subject 严格分离，但它们仍然来自同一个 OULU-NPU 数据集，因此摄像设备、成像过程、攻击介质、光照环境以及数据预处理方式具有较强一致性。
-
-因此，同域 Accuracy 和 AUC 很高并不代表模型具有同样强的跨数据集泛化能力。模型可能同时学习到真正的活体线索以及特定数据集中的纹理、颜色、设备和攻击介质特征。
-
-后续跨数据集实验需要重点观察：
+当前第二周默认设置为：
 
 ```text
-Dataset A 训练
-      ↓
-ResNet18
-      ↓
-Dataset B 测试
+OULU-NPU 训练得到 ResNet18
+          ↓
+     固定模型参数
+          ↓
+CASIA / MSU-MFSD / Replay-Attack 直接测试
 ```
 
-如果跨数据集 Accuracy 和 AUC 明显下降、EER 明显升高，则可以说明模型存在较强的域依赖问题，这也是后续泛化增强方法需要解决的核心问题。
+这样可以观察源域模型在摄像设备、光照环境、攻击介质、图像质量和数据分布发生变化后是否仍然有效。
+
+### 单个跨数据集测试
+
+例如 OULU-NPU -> CASIA：
+
+```bash
+python evaluate_cross_dataset.py \
+    --checkpoint outputs/OULU-NPU/best.pth \
+    --source_dataset OULU-NPU \
+    --dataset CASIA \
+    --data_root /root/Desktop/code/FAS/ProcessedData
+```
+
+输出目录为：
+
+```text
+outputs_cross/OULU-NPU_to_CASIA/
+```
+
+其中包括跨数据集指标、ROC 曲线、混淆矩阵以及结果摘要 JSON。
+
+### 批量完成第二周实验
+
+推荐直接执行：
+
+```bash
+bash scripts/run_week2_cross_dataset.sh
+```
+
+脚本会自动测试：
+
+```text
+OULU-NPU -> CASIA
+OULU-NPU -> MSU-MFSD
+OULU-NPU -> Replay-Attack
+```
+
+并在全部完成后自动生成：
+
+```text
+outputs_cross/cross_dataset_summary.csv
+outputs_cross/cross_dataset_summary.md
+```
+
+`cross_dataset_summary.csv` 适合后续进行统计或导入表格软件；`cross_dataset_summary.md` 可以直接用于实验报告整理。
+
+### 第二周实验应如何分析
+
+重点将第一周同域性能与第二周跨域性能进行对比：
+
+| 场景 | 训练数据集 | 测试数据集 | Accuracy | AUC | EER |
+|---|---|---|---:|---:|---:|
+| 同域 | OULU-NPU | OULU-NPU | 99.8161% | 99.9999% | 0.0526% |
+| 跨域 | OULU-NPU | CASIA | 待运行 | 待运行 | 待运行 |
+| 跨域 | OULU-NPU | MSU-MFSD | 待运行 | 待运行 | 待运行 |
+| 跨域 | OULU-NPU | Replay-Attack | 待运行 | 待运行 | 待运行 |
+
+如果跨数据集 Accuracy 和 AUC 明显下降、EER 明显升高，说明模型存在明显的域依赖问题。模型可能学习了源数据集中特有的纹理、颜色、摄像设备或攻击媒介等捷径特征，而不是完全稳定的域无关活体线索。这个结论将直接作为第三周泛化增强实验的出发点。
 
 ## 十、项目文件说明
 
@@ -216,6 +262,9 @@ FAS/
 ├── metrics.py
 ├── train.py
 ├── evaluate_cross_dataset.py
+├── summarize_cross_results.py
+├── scripts/
+│   └── run_week2_cross_dataset.sh
 ├── requirements.txt
 ├── .gitignore
 └── ProcessedData/
@@ -226,22 +275,21 @@ FAS/
 - `datasets.py`：数据扫描、标签识别、Subject ID 提取、Subject-disjoint 划分以及图像预处理；
 - `model.py`：构建 ResNet18 二分类模型；
 - `metrics.py`：计算 Accuracy、AUC、EER、混淆矩阵并保存 ROC 等评价结果；
-- `train.py`：完成训练、验证、Early Stopping、最佳模型保存和测试；
-- `evaluate_cross_dataset.py`：加载训练好的模型并在其他数据集上执行跨数据集测试；
-- `EXPERIMENT_RESULTS.md`：持续记录不同阶段的实验设置和实验结果；
-- `requirements.txt`：Python 依赖说明；
-- `.gitignore`：排除数据集、模型权重、日志和临时文件。
+- `train.py`：完成训练、验证、Early Stopping、最佳模型保存和同域测试；
+- `evaluate_cross_dataset.py`：加载源域模型，在目标数据集上直接执行跨数据集测试；
+- `summarize_cross_results.py`：自动汇总多个跨数据集实验结果；
+- `scripts/run_week2_cross_dataset.sh`：一键执行第二周全部跨数据集实验；
+- `EXPERIMENT_RESULTS.md`：持续记录各阶段实验结果。
 
 ## 十一、运行环境
 
 建议使用独立 Conda 环境：
 
 ```bash
-conda create -n fas python=3.10 -y
 conda activate fas
 ```
 
-当前服务器已验证可用的 PyTorch 环境为：
+当前服务器已验证环境：
 
 | 参数 | 数值 |
 |---|---|
@@ -251,63 +299,8 @@ conda activate fas
 | `CUDA` | `12.8` |
 | `GPU` | `NVIDIA GeForce RTX 4090 D` |
 
-安装其余依赖：
+## 十二、实验报告建议记录内容
 
-```bash
-pip install -r requirements.txt
-```
+每次实验至少记录：训练数据集、测试数据集、数据划分方式、模型结构、输入尺寸、主要训练参数、Accuracy、AUC、EER、Confusion Matrix、ROC Curve、最佳 epoch、同域与跨域性能差异以及对性能下降原因的分析。
 
-## 十二、训练命令
-
-OULU-NPU Baseline：
-
-```bash
-python train.py \
-    --dataset OULU-NPU \
-    --data_root /root/Desktop/code/FAS/ProcessedData
-```
-
-模型训练完成后，结果默认保存在：
-
-```text
-outputs/OULU-NPU/
-```
-
-主要输出包括：
-
-- `best.pth`：最佳模型参数；
-- `history.json`：训练过程记录；
-- `split_summary.json`：数据划分信息；
-- `test_metrics.json`：测试指标；
-- `test_roc.png`：ROC 曲线；
-- `test_confusion_matrix.png`：混淆矩阵。
-
-## 十三、跨数据集测试
-
-例如使用 OULU-NPU 训练得到的模型直接测试 CASIA：
-
-```bash
-python evaluate_cross_dataset.py \
-    --checkpoint outputs/OULU-NPU/best.pth \
-    --dataset CASIA \
-    --data_root /root/Desktop/code/FAS/ProcessedData
-```
-
-跨数据集评价阶段不允许使用目标测试数据更新模型参数，以保证测试集真正作为未见域使用。
-
-## 十四、实验报告建议记录内容
-
-每次实验建议至少记录以下信息：
-
-1. 训练数据集与测试数据集；
-2. 数据划分方式及是否保证 Subject-disjoint；
-3. 模型结构；
-4. 输入尺寸与主要训练参数；
-5. Accuracy、AUC、EER；
-6. Confusion Matrix；
-7. ROC Curve；
-8. 最佳 epoch 和 Early Stopping 情况；
-9. 与 Baseline 的性能变化；
-10. 对错误样本和跨域性能下降原因的分析。
-
-后续所有实验结果建议统一追加到 `EXPERIMENT_RESULTS.md`，避免实验过程中结果散落在终端日志中。
+详细实验结果持续记录在 [`EXPERIMENT_RESULTS.md`](EXPERIMENT_RESULTS.md)。
