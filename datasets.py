@@ -28,44 +28,30 @@ def strip_frame_suffix(path: Path) -> str:
 
 
 def infer_subject(path: Path, dataset_name: str) -> str:
-    """
-    Infer a subject/client identity from the processed filename.
-
-    The split key intentionally excludes live/spoof so all samples belonging to
-    the same person stay in exactly one of train/validation/test.
-    """
+    """Infer a subject/client identity for subject-disjoint splitting."""
     stem = strip_frame_suffix(path)
     name = dataset_name.lower().replace('_', '-').strip()
 
-    # OULU-NPU examples: 1_1_01_1, 1_1_01_2 -> subject 01.
     if name in {'oulu-npu', 'oulu'}:
         parts = stem.split('_')
         if len(parts) >= 3 and parts[2].isdigit():
             return f'oulu_subject_{parts[2]}'
 
-    # MSU-MFSD examples: real_client026_android_SD_scene01,
-    # attack_client037_android_SD_ipad_video_scene01 -> client026/client037.
     if name in {'msu-mfsd', 'msu'}:
         m = re.search(r'client[_-]?(\d+)', stem, flags=re.I)
         if m:
             return f'msu_client_{int(m.group(1)):03d}'
 
-    # Replay-Attack examples: client030_session01_webcam_authenticate_...
     if name in {'replay-attack', 'replayattack', 'replay'}:
         m = re.search(r'client[_-]?(\d+)', stem, flags=re.I)
         if m:
             return f'replay_client_{int(m.group(1)):03d}'
 
-    # CASIA examples: train_2_HR_1, train_12_1, test_26_1.
-    # CASIA train/test prefixes represent separate identity pools, so retain the
-    # prefix together with the numeric subject index.
     if name in {'casia', 'casia-fasd', 'casia-fas'}:
         m = re.match(r'(train|test)_(\d+)(?:_|$)', stem, flags=re.I)
         if m:
             return f'casia_{m.group(1).lower()}_subject_{int(m.group(2)):02d}'
 
-    # Conservative fallback: use the whole video ID. This still prevents
-    # adjacent frames from one video leaking across splits if a new dataset is added.
     return f'{dataset_name}_video_{stem}'
 
 
@@ -80,8 +66,7 @@ def scan_dataset(dataset_dir: str, live_keywords=DEFAULT_LIVE, spoof_keywords=DE
         if p.is_file() and p.suffix.lower() in IMG_EXTS:
             label = infer_label(p, live_keywords, spoof_keywords)
             if label is not None:
-                subject = infer_subject(p, dataset_name)
-                samples.append((str(p), label, subject))
+                samples.append((str(p), label, infer_subject(p, dataset_name)))
 
     if not samples:
         raise RuntimeError(f'No labeled images found under {root}. Check folder names/keywords.')
@@ -126,17 +111,61 @@ def split_by_group(samples, seed=42, train_ratio=0.7, val_ratio=0.15):
     return train, val, test
 
 
+def build_train_transform(image_size: int, augmentation: str):
+    """Build the training transform used by the baseline or week-3 generalization experiment."""
+    if augmentation == 'baseline':
+        return transforms.Compose([
+            transforms.Resize((image_size, image_size)),
+            transforms.RandomHorizontalFlip(),
+            transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+        ])
+
+    if augmentation == 'strong':
+        return transforms.Compose([
+            transforms.RandomResizedCrop(
+                image_size,
+                scale=(0.80, 1.00),
+                ratio=(0.90, 1.10),
+            ),
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomApply([
+                transforms.ColorJitter(
+                    brightness=0.40,
+                    contrast=0.40,
+                    saturation=0.40,
+                    hue=0.10,
+                )
+            ], p=0.80),
+            transforms.RandomGrayscale(p=0.15),
+            transforms.RandomApply([
+                transforms.GaussianBlur(kernel_size=5, sigma=(0.1, 2.0))
+            ], p=0.30),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+            transforms.RandomErasing(
+                p=0.25,
+                scale=(0.02, 0.15),
+                ratio=(0.3, 3.3),
+                value='random',
+            ),
+        ])
+
+    raise ValueError(f'Unsupported augmentation mode: {augmentation}')
+
+
 class FASImageDataset(Dataset):
-    def __init__(self, samples: List[Tuple[str, int, str]], train=False, image_size=224):
+    def __init__(
+        self,
+        samples: List[Tuple[str, int, str]],
+        train=False,
+        image_size=224,
+        augmentation='baseline',
+    ):
         self.samples = samples
         if train:
-            self.transform = transforms.Compose([
-                transforms.Resize((image_size, image_size)),
-                transforms.RandomHorizontalFlip(),
-                transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
-                transforms.ToTensor(),
-                transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
-            ])
+            self.transform = build_train_transform(image_size, augmentation)
         else:
             self.transform = transforms.Compose([
                 transforms.Resize((image_size, image_size)),
