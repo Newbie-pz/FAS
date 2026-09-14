@@ -49,6 +49,54 @@
 
 虽然本次同域结果较高，但这并不能证明模型已经获得较强的跨域泛化能力。不同数据集在摄像设备、光照环境、攻击介质、图像质量和预处理过程等方面均可能存在明显分布差异，因此后续应使用跨数据集实验进一步验证模型是否学习到了具有泛化性的活体线索。
 
+## 第二周：跨数据集泛化实验
+
+第二周目标是验证第一周 Baseline 在未参与训练的新数据集上的泛化能力。实验遵循“源域训练、目标域直接测试”的原则：模型只在源数据集上训练，目标数据集仅用于测试，不允许使用目标数据进行训练、微调或参数更新。
+
+当前固定第一周训练好的 OULU-NPU ResNet18 作为源模型，分别测试 CASIA、MSU-MFSD 和 Replay-Attack。
+
+| 实验编号 | 训练数据集 | 测试数据集 | 模型 | 训练方式 | Accuracy | AUC | EER | 备注 |
+|---|---|---|---|---|---:|---:|---:|---|
+| W2-OULU-CASIA-001 | OULU-NPU | CASIA | ResNet18 | Source-only | 待运行 | 待运行 | 待运行 | 目标域不参与训练 |
+| W2-OULU-MSU-001 | OULU-NPU | MSU-MFSD | ResNet18 | Source-only | 待运行 | 待运行 | 待运行 | 目标域不参与训练 |
+| W2-OULU-REPLAY-001 | OULU-NPU | Replay-Attack | ResNet18 | Source-only | 待运行 | 待运行 | 待运行 | 目标域不参与训练 |
+
+### 第二周运行方式
+
+完成第一周训练并确保 `outputs/OULU-NPU/best.pth` 存在后，执行：
+
+```bash
+bash scripts/run_week2_cross_dataset.sh
+```
+
+脚本将依次完成：
+
+```text
+OULU-NPU -> CASIA
+OULU-NPU -> MSU-MFSD
+OULU-NPU -> Replay-Attack
+```
+
+每个目标数据集都会生成 Accuracy、AUC、EER、ROC Curve、Confusion Matrix 和 JSON 结果文件。全部测试结束后，程序会自动生成：
+
+```text
+outputs_cross/cross_dataset_summary.csv
+outputs_cross/cross_dataset_summary.md
+```
+
+### 第二周重点分析内容
+
+实验报告中需要重点比较第一周同域结果与第二周跨域结果：
+
+| 场景 | 训练数据集 | 测试数据集 | Accuracy | AUC | EER |
+|---|---|---|---:|---:|---:|
+| 同域 Baseline | OULU-NPU | OULU-NPU | 99.8161% | 99.9999% | 0.0526% |
+| 跨域 1 | OULU-NPU | CASIA | 待运行 | 待运行 | 待运行 |
+| 跨域 2 | OULU-NPU | MSU-MFSD | 待运行 | 待运行 | 待运行 |
+| 跨域 3 | OULU-NPU | Replay-Attack | 待运行 | 待运行 | 待运行 |
+
+如果跨域 Accuracy 和 AUC 明显下降、EER 明显升高，说明模型在源数据集内学到的部分判别特征依赖于特定数据分布，例如摄像设备、光照条件、攻击介质、颜色分布、纹理或预处理方式，而没有完全学习到稳定、域无关的活体特征。这一现象将作为第三周开展泛化增强方法的实验依据。
+
 ## 后续实验记录模板
 
 | 实验编号 | 训练数据集 | 测试数据集 | 模型 | 方法/改动 | Accuracy | AUC | EER | 备注 |
