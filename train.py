@@ -60,6 +60,7 @@ def run_epoch(
         if train and method == 'fourier':
             x = fourier_amplitude_mix(
                 x,
+                labels=y,
                 p=fourier_p,
                 max_lambda=fourier_max_lambda,
                 low_freq_ratio=fourier_low_freq_ratio,
