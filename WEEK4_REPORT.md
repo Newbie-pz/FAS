@@ -2,6 +2,8 @@
 
 > **方法命名说明**：第四周中的 `Strong Data Augmentation` 与 `Appearance Randomization` 是本项目自定义训练策略；`MixStyle` 是已有正式方法名，本项目做 ResNet18 轻量集成；`Fourier Amplitude Augmentation` 是本项目实现的轻量频域增强，不等同于完整复现某篇频域 FAS 方法。完整实现细节见 [`METHOD_IMPLEMENTATION.md`](METHOD_IMPLEMENTATION.md)。
 
+> **数据协议说明**：第四周所有统计都基于同一套 `ProcessedData`、同一 Subject-disjoint 划分和同一 Source-only 跨域评价协议。原始视频抽帧、Face Detection 和 Face Crop 的历史参数未保留在当前仓库，数据入口与质量审计见 [`DATA_PREPROCESSING.md`](DATA_PREPROCESSING.md)。因此第四周对比只解释当前可复现的训练、增强与评估差异。
+
 ## 一、实验目的
 
 第四周不再继续增加新的泛化方法，而是对前三周已经完成的实验进行统一整理、横向比较和机制分析。重点回答：不同泛化策略是否能稳定改善跨数据集性能、哪些策略只在特定目标域有效、以及当前项目中哪种方案具有更好的跨域一致性。
@@ -186,4 +188,4 @@ outputs_week4/
 
 但 Fourier 并未彻底解决跨域问题，尤其 CASIA 上 AUC 仍低于 0.5。最终实验结论应表述为“频域幅度增强能够稳定改善本项目设置下的跨数据集泛化”，而不能表述为“已经解决跨数据集泛化问题”。
 
-方法复现与技术报告表述请以 [`METHOD_IMPLEMENTATION.md`](METHOD_IMPLEMENTATION.md) 为准。
+方法复现与技术报告表述请以 [`METHOD_IMPLEMENTATION.md`](METHOD_IMPLEMENTATION.md) 为准；数据来源与预处理边界请以 [`DATA_PREPROCESSING.md`](DATA_PREPROCESSING.md) 为准。
