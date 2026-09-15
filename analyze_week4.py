@@ -294,6 +294,7 @@ def main():
         f.write('# 第四周：实验对比、消融与结果分析\n\n')
         f.write('本周不再训练新的模型，而是统一分析前三周已经完成的五组方法。所有方法使用相同的 OULU-NPU 源域、相同 Subject-disjoint 划分和相同三个跨域目标数据集。\n\n')
         f.write('> 命名说明：Strong 是本项目自定义的 Strong Data Augmentation 配置；Appearance 是本项目自定义的 Appearance Randomization（早期文档称 Appearance Augmentation）；MixStyle 是已有正式方法名，本项目做轻量 ResNet18 集成；Fourier 是本项目实现的轻量 Fourier Amplitude Augmentation，不代表完整复现某篇频域 FAS 方法。完整实现见仓库根目录 METHOD_IMPLEMENTATION.md。\n\n')
+        f.write('> 数据协议说明：本分析从已经整理好的 ProcessedData 开始，所有方法共享相同的数据入口与划分。原始视频抽帧、Face Detection 与 Face Crop 的历史参数未保留在当前仓库，数据来源、不可追溯项和只读质量审计流程见仓库根目录 DATA_PREPROCESSING.md。\n\n')
 
         f.write('## 一、方法与单变量改动\n\n')
         f.write('| 方法简称 | 相对 Baseline 的主要改动 |\n')
