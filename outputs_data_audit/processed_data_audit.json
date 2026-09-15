@@ -1,0 +1,122 @@
+{
+  "data_root": "/root/Desktop/code/FAS/ProcessedData",
+  "min_side_threshold": 64,
+  "datasets": [
+    {
+      "dataset": "OULU-NPU",
+      "dataset_dir": "/root/Desktop/code/FAS/ProcessedData/OULU-NPU",
+      "total_images": 69896,
+      "live_images": 23060,
+      "spoof_images": 46836,
+      "unlabeled_images": 0,
+      "unreadable_images": 0,
+      "non_rgb_convertible_images": 0,
+      "small_images": 0,
+      "frame_named_images": 69896,
+      "frame_named_ratio": 1.0,
+      "group_count": 55,
+      "subject_disjoint_split_possible": true,
+      "min_width": 256,
+      "max_width": 256,
+      "min_height": 256,
+      "max_height": 256,
+      "top_resolutions": [
+        {
+          "resolution": "256x256",
+          "count": 69896
+        }
+      ],
+      "unlabeled_examples": [],
+      "small_image_examples": [],
+      "non_rgb_convertible_examples": [],
+      "unreadable_examples": []
+    },
+    {
+      "dataset": "CASIA",
+      "dataset_dir": "/root/Desktop/code/FAS/ProcessedData/CASIA",
+      "total_images": 11110,
+      "live_images": 1810,
+      "spoof_images": 9300,
+      "unlabeled_images": 0,
+      "unreadable_images": 0,
+      "non_rgb_convertible_images": 0,
+      "small_images": 0,
+      "frame_named_images": 11110,
+      "frame_named_ratio": 1.0,
+      "group_count": 50,
+      "subject_disjoint_split_possible": true,
+      "min_width": 256,
+      "max_width": 256,
+      "min_height": 256,
+      "max_height": 256,
+      "top_resolutions": [
+        {
+          "resolution": "256x256",
+          "count": 11110
+        }
+      ],
+      "unlabeled_examples": [],
+      "small_image_examples": [],
+      "non_rgb_convertible_examples": [],
+      "unreadable_examples": []
+    },
+    {
+      "dataset": "MSU-MFSD",
+      "dataset_dir": "/root/Desktop/code/FAS/ProcessedData/MSU-MFSD",
+      "total_images": 4019,
+      "live_images": 1053,
+      "spoof_images": 2966,
+      "unlabeled_images": 0,
+      "unreadable_images": 0,
+      "non_rgb_convertible_images": 0,
+      "small_images": 0,
+      "frame_named_images": 4019,
+      "frame_named_ratio": 1.0,
+      "group_count": 35,
+      "subject_disjoint_split_possible": true,
+      "min_width": 256,
+      "max_width": 256,
+      "min_height": 256,
+      "max_height": 256,
+      "top_resolutions": [
+        {
+          "resolution": "256x256",
+          "count": 4019
+        }
+      ],
+      "unlabeled_examples": [],
+      "small_image_examples": [],
+      "non_rgb_convertible_examples": [],
+      "unreadable_examples": []
+    },
+    {
+      "dataset": "Replay-Attack",
+      "dataset_dir": "/root/Desktop/code/FAS/ProcessedData/Replay-Attack",
+      "total_images": 19508,
+      "live_images": 7600,
+      "spoof_images": 11908,
+      "unlabeled_images": 0,
+      "unreadable_images": 0,
+      "non_rgb_convertible_images": 0,
+      "small_images": 0,
+      "frame_named_images": 19508,
+      "frame_named_ratio": 1.0,
+      "group_count": 50,
+      "subject_disjoint_split_possible": true,
+      "min_width": 256,
+      "max_width": 256,
+      "min_height": 256,
+      "max_height": 256,
+      "top_resolutions": [
+        {
+          "resolution": "256x256",
+          "count": 19508
+        }
+      ],
+      "unlabeled_examples": [],
+      "small_image_examples": [],
+      "non_rgb_convertible_examples": [],
+      "unreadable_examples": []
+    }
+  ]
+}
