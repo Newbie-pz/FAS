@@ -2,6 +2,8 @@
 
 本文档汇总 FAS 项目第一至第四周的正式实验结果。更详细的阶段性分析见 [`WEEK3_FINAL_REPORT.md`](WEEK3_FINAL_REPORT.md) 和 [`WEEK4_REPORT.md`](WEEK4_REPORT.md)。
 
+> **命名说明**：`Strong Data Augmentation` 与 `Appearance Randomization` 是本项目自定义的训练策略名称，不是已有标准算法名；早期记录中的 `Strong Augmentation`、`Appearance Augmentation` 分别指同一代码配置。`MixStyle` 是已有正式方法名，本项目做轻量 ResNet18 集成；`Fourier Amplitude Augmentation` 是本项目实现的轻量频域幅度增强，而不是某篇频域 FAS 方法的完整复现。详细实现见 [`METHOD_IMPLEMENTATION.md`](METHOD_IMPLEMENTATION.md)。
+
 ## 第一周：单数据集 Baseline
 
 第一周使用 ResNet18 在 OULU-NPU 上完成 Live / Spoof 二分类。数据采用自定义 Subject-disjoint 70/15/15 划分，避免同一 Subject 同时出现在 Train、Validation、Test 中。
@@ -39,20 +41,20 @@
 
 第三周保持 ResNet18、OULU-NPU 源域训练、Subject-disjoint 划分和 Source-only 跨数据集评价协议不变，依次测试四类泛化增强策略：
 
-1. Strong Augmentation：更强的空间域随机增强；
-2. Appearance Augmentation：外观/成像风格随机化；
-3. MixStyle：浅层特征均值与方差混合；
-4. Fourier Amplitude Augmentation：同类别样本之间低频幅度谱混合，并保留原相位。
+1. **Strong Data Augmentation（项目自定义）**：`--augmentation strong`，更强的空间域与外观随机增强；
+2. **Appearance Randomization（项目自定义）**：`--augmentation appearance`，重点随机化成像外观并保留完整人脸结构；
+3. **MixStyle**：已有正式方法名，本项目插在 ResNet18 `layer1/layer2` 后；
+4. **Fourier Amplitude Augmentation（项目轻量实现）**：`--method fourier`，同类别样本之间低频幅度谱混合，并保留原相位。
 
 ### 3.1 同域结果
 
 | 方法 | OULU-NPU Accuracy | OULU-NPU AUC | OULU-NPU EER |
 |---|---:|---:|---:|
 | Baseline | 99.8161% | 99.9999% | 0.0526% |
-| Strong | 95.3052% | 99.9971% | 0.2104% |
-| Appearance | 97.4074% | 99.9624% | 1.0721% |
+| Strong Data Augmentation | 95.3052% | 99.9971% | 0.2104% |
+| Appearance Randomization | 97.4074% | 99.9624% | 1.0721% |
 | MixStyle | 98.5898% | 99.9914% | 0.5920% |
-| Fourier | 98.5373% | 99.9715% | 0.8814% |
+| Fourier Amplitude Augmentation | 98.5373% | 99.9715% | 0.8814% |
 
 ### 3.2 跨数据集结果
 
@@ -61,40 +63,40 @@
 | 方法 | Accuracy | AUC | EER |
 |---|---:|---:|---:|
 | Baseline | 28.0648% | 23.4007% | 69.8964% |
-| Strong | **61.2061%** | **41.9301%** | **55.6456%** |
-| Appearance | 40.0720% | 38.3534% | 58.6650% |
+| Strong Data Augmentation | **61.2061%** | **41.9301%** | **55.6456%** |
+| Appearance Randomization | 40.0720% | 38.3534% | 58.6650% |
 | MixStyle | 38.5779% | 32.0224% | 63.1936% |
-| Fourier | 33.6994% | 31.6763% | 64.5885% |
+| Fourier Amplitude Augmentation | 33.6994% | 31.6763% | 64.5885% |
 
 #### MSU-MFSD
 
 | 方法 | Accuracy | AUC | EER |
 |---|---:|---:|---:|
 | Baseline | 60.9356% | 64.0805% | 41.6813% |
-| Strong | 68.2259% | 60.1555% | 41.6844% |
-| Appearance | 56.2080% | 56.6613% | 45.4044% |
+| Strong Data Augmentation | 68.2259% | 60.1555% | 41.6844% |
+| Appearance Randomization | 56.2080% | 56.6613% | 45.4044% |
 | MixStyle | 65.6133% | 59.3304% | 42.4321% |
-| Fourier | **75.2924%** | **65.7463%** | **39.5778%** |
+| Fourier Amplitude Augmentation | **75.2924%** | **65.7463%** | **39.5778%** |
 
 #### Replay-Attack
 
 | 方法 | Accuracy | AUC | EER |
 |---|---:|---:|---:|
 | Baseline | 48.2725% | 39.1893% | 54.5629% |
-| Strong | 49.1234% | 38.8743% | 54.8851% |
-| Appearance | 55.5157% | 46.4997% | 51.1434% |
+| Strong Data Augmentation | 49.1234% | 38.8743% | 54.8851% |
+| Appearance Randomization | 55.5157% | 46.4997% | 51.1434% |
 | MixStyle | 56.5870% | 48.3348% | 51.1476% |
-| Fourier | **66.2087%** | **63.8448%** | **41.0995%** |
+| Fourier Amplitude Augmentation | **66.2087%** | **63.8448%** | **41.0995%** |
 
 ### 3.3 三个目标域宏平均
 
-| 方法 | 平均 Accuracy | 平均 AUC | 平均 EER |
-|---|---:|---:|---:|
-| Baseline | 45.7576% | 42.2235% | 55.3802% |
-| Strong | **59.5185%** | 46.9866% | 50.7384% |
-| Appearance | 50.5986% | 47.1715% | 51.7376% |
-| MixStyle | 53.5927% | 46.5625% | 52.2578% |
-| Fourier | 58.4002% | **53.7558%** | **48.4219%** |
+| 方法 | 名称性质 | 平均 Accuracy | 平均 AUC | 平均 EER |
+|---|---|---:|---:|---:|
+| Baseline | 项目基础配置 | 45.7576% | 42.2235% | 55.3802% |
+| Strong Data Augmentation | 项目自定义 | **59.5185%** | 46.9866% | 50.7384% |
+| Appearance Randomization | 项目自定义 | 50.5986% | 47.1715% | 51.7376% |
+| MixStyle | 已有正式方法名；本项目轻量集成 | 53.5927% | 46.5625% | 52.2578% |
+| Fourier Amplitude Augmentation | 项目轻量频域实现 | 58.4002% | **53.7558%** | **48.4219%** |
 
 ### 3.4 三域一致性
 
@@ -102,10 +104,10 @@
 
 | 方法 | CASIA | MSU-MFSD | Replay-Attack | 完整改善数量 |
 |---|---|---|---|---:|
-| Strong | 是 | 否 | 否 | 1/3 |
-| Appearance | 是 | 否 | 是 | 2/3 |
+| Strong Data Augmentation | 是 | 否 | 否 | 1/3 |
+| Appearance Randomization | 是 | 否 | 是 | 2/3 |
 | MixStyle | 是 | 否 | 是 | 2/3 |
-| Fourier | **是** | **是** | **是** | **3/3** |
+| Fourier Amplitude Augmentation | **是** | **是** | **是** | **3/3** |
 
 Fourier 是目前唯一在三个未见目标域上均实现三项指标方向一致改善的方法。
 
@@ -121,13 +123,13 @@ Fourier 是目前唯一在三个未见目标域上均实现三项指标方向一
 
 第三周最终推荐 Fourier Amplitude Augmentation，原因是其跨目标域改善一致性最好。需要保留实验边界：CASIA 上 Fourier 的绝对 AUC 仍低于 0.5，因此应表述为“稳定改善跨域泛化”，而不是“解决跨域泛化问题”。
 
-详细分析见 [`WEEK3_FINAL_REPORT.md`](WEEK3_FINAL_REPORT.md)。
+详细分析见 [`WEEK3_FINAL_REPORT.md`](WEEK3_FINAL_REPORT.md)，复现细节见 [`METHOD_IMPLEMENTATION.md`](METHOD_IMPLEMENTATION.md)。
 
 ---
 
 ## 第四周：统一对比、消融式分析与可视化
 
-第四周不再新增训练方法，而是统一分析 Baseline、Strong、Appearance、MixStyle 和 Fourier 五组实验。
+第四周不再新增训练方法，而是统一分析 Baseline、Strong Data Augmentation、Appearance Randomization、MixStyle 和 Fourier Amplitude Augmentation 五组实验。
 
 第四周正式输出目录：[`outputs_week4/`](outputs_week4/)
 
@@ -145,7 +147,7 @@ Fourier 是目前唯一在三个未见目标域上均实现三项指标方向一
 
 ### 第四周核心结论
 
-- Strong 的三域平均 Accuracy 最高，为 59.5185%；
+- Strong Data Augmentation 的三域平均 Accuracy 最高，为 59.5185%；
 - Fourier 的三域平均 AUC 最高，为 53.7558%；
 - Fourier 的三域平均 EER 最低，为 48.4219%；
 - Fourier 是唯一在 CASIA、MSU-MFSD、Replay-Attack 三个目标域上都同时实现 Accuracy↑、AUC↑、EER↓ 的方法；
