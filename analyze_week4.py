@@ -11,27 +11,27 @@ METHODS = {
     'Baseline': {
         'cross_csv': Path('outputs_cross/cross_dataset_summary.csv'),
         'source_json': Path('outputs/OULU-NPU/test_metrics.json'),
-        'description': '基础 ResNet18 + 基础数据增强',
+        'description': '项目基础 ResNet18 + 基础数据增强',
     },
     'Strong': {
         'cross_csv': Path('outputs_week3_cross/strong/strong_cross_dataset_summary.csv'),
         'source_json': Path('outputs_week3/strong/OULU-NPU/test_metrics.json'),
-        'description': '强数据增强',
+        'description': '项目自定义 Strong Data Augmentation：强空间/外观数据增强',
     },
     'Appearance': {
         'cross_csv': Path('outputs_week3_cross/appearance/appearance_cross_dataset_summary.csv'),
         'source_json': Path('outputs_week3/appearance/OULU-NPU/test_metrics.json'),
-        'description': '外观/成像风格随机化',
+        'description': '项目自定义 Appearance Randomization（旧称 Appearance Augmentation）：外观/成像风格随机化',
     },
     'MixStyle': {
         'cross_csv': Path('outputs_week3_cross/mixstyle/mixstyle_cross_dataset_summary.csv'),
         'source_json': Path('outputs_week3/mixstyle/OULU-NPU/test_metrics.json'),
-        'description': '浅层特征统计混合',
+        'description': '已有正式方法名 MixStyle；本项目在 ResNet18 浅层做轻量集成',
     },
     'Fourier': {
         'cross_csv': Path('outputs_week3_cross/fourier/fourier_cross_dataset_summary.csv'),
         'source_json': Path('outputs_week3/fourier/OULU-NPU/test_metrics.json'),
-        'description': '同类样本低频幅度谱混合',
+        'description': '项目轻量 Fourier Amplitude Augmentation：同类样本低频幅度谱混合',
     },
 }
 
@@ -157,7 +157,6 @@ def save_delta_heatmap(cross):
     methods = [m for m in METHODS if m != 'Baseline']
     baseline = cross['Baseline']
 
-    # AUC 越大越好；EER 转换成“降低量”，越大越好。
     data = []
     row_labels = []
     for method in methods:
@@ -294,14 +293,15 @@ def main():
     with open(OUT / 'week4_analysis.md', 'w', encoding='utf-8') as f:
         f.write('# 第四周：实验对比、消融与结果分析\n\n')
         f.write('本周不再训练新的模型，而是统一分析前三周已经完成的五组方法。所有方法使用相同的 OULU-NPU 源域、相同 Subject-disjoint 划分和相同三个跨域目标数据集。\n\n')
+        f.write('> 命名说明：Strong 是本项目自定义的 Strong Data Augmentation 配置；Appearance 是本项目自定义的 Appearance Randomization（早期文档称 Appearance Augmentation）；MixStyle 是已有正式方法名，本项目做轻量 ResNet18 集成；Fourier 是本项目实现的轻量 Fourier Amplitude Augmentation，不代表完整复现某篇频域 FAS 方法。完整实现见仓库根目录 METHOD_IMPLEMENTATION.md。\n\n')
 
         f.write('## 一、方法与单变量改动\n\n')
-        f.write('| 方法 | 相对 Baseline 的主要改动 |\n')
+        f.write('| 方法简称 | 相对 Baseline 的主要改动 |\n')
         f.write('|---|---|\n')
         for method, config in METHODS.items():
             f.write(f"| {method} | {config['description']} |\n")
 
-        f.write('\n这种设计可以从“单变量机制对照”的角度观察不同泛化策略对跨域性能的影响。\n\n')
+        f.write('\n图表和 CSV 为保持紧凑仍使用 Baseline / Strong / Appearance / MixStyle / Fourier 简称；技术报告首次出现时应使用 METHOD_IMPLEMENTATION.md 中的完整名称。\n\n')
 
         f.write('## 二、同域性能对比\n\n')
         f.write('| 方法 | Accuracy | AUC | EER | EER Threshold |\n')
@@ -354,10 +354,10 @@ def main():
             )
 
         f.write('\n## 六、消融式机制分析\n\n')
-        f.write('1. **像素级强增强并不等于稳定域泛化。** Strong 在 CASIA 上提升显著，但在 MSU-MFSD 和 Replay-Attack 的 AUC/EER 没有形成一致改善，说明过强裁切、模糊或遮挡可能同时破坏有用的活体纹理。\n')
-        f.write('2. **外观随机化主要缓解部分成像风格差异。** Appearance 在 Replay-Attack 上明显改善，但在 MSU-MFSD 上退化，说明颜色、亮度和清晰度随机化只能覆盖一部分域偏移。\n')
-        f.write('3. **MixStyle 能改善部分浅层风格偏移，但稳定性仍不足。** 它在 CASIA 和 Replay-Attack 上有改善，但 MSU-MFSD 的 AUC/EER 低于 Baseline。\n')
-        f.write('4. **Fourier 是当前唯一实现三域一致改善的方法。** 相比 Baseline，三个目标域均同时满足 Accuracy 上升、AUC 上升、EER 下降，说明针对低频幅度统计进行扰动比单纯扩大像素增强强度更适合当前任务。\n')
+        f.write('1. **项目自定义 Strong Data Augmentation 并不等于稳定域泛化。** 它在 CASIA 上提升显著，但在 MSU-MFSD 和 Replay-Attack 的 AUC/EER 没有形成一致改善，说明过强裁切、模糊或遮挡可能同时破坏有用的活体纹理。\n')
+        f.write('2. **项目自定义 Appearance Randomization 主要缓解部分成像风格差异。** 它在 Replay-Attack 上明显改善，但在 MSU-MFSD 上退化，说明颜色、亮度和清晰度随机化只能覆盖一部分域偏移。\n')
+        f.write('3. **MixStyle 能改善部分浅层风格偏移，但稳定性仍不足。** 本项目在 ResNet18 浅层做轻量集成；CASIA 和 Replay-Attack 有改善，但 MSU-MFSD 的 AUC/EER 低于 Baseline。\n')
+        f.write('4. **本项目轻量 Fourier Amplitude Augmentation 是当前唯一实现三域一致改善的方法。** 相比 Baseline，三个目标域均同时满足 Accuracy 上升、AUC 上升、EER 下降。\n')
         f.write('5. **同域高性能与跨域高泛化并不等价。** 所有方法在 OULU-NPU 同域仍保持较高 AUC，但跨域差异巨大，因此最终评价必须以跨域 AUC/EER 为主。\n')
 
         f.write('\n## 七、Fourier 相对 Baseline 的关键提升\n\n')
@@ -372,7 +372,7 @@ def main():
             )
 
         f.write('\n## 八、第四周结论\n\n')
-        f.write('五组方法的统一对比表明，普通像素增强、外观随机化和特征统计混合都只能在部分目标域取得收益，而 Fourier 低频幅度扰动是当前唯一在 CASIA、MSU-MFSD 和 Replay-Attack 三个未见目标域上同时改善 Accuracy、AUC 与 EER 的方案。其三个目标域宏平均 AUC 最高、宏平均 EER 最低，因此将 Fourier 作为本项目当前推荐的泛化增强方法。\n\n')
+        f.write('五组方法的统一对比表明，项目自定义的像素强增强、外观随机化和特征统计层面的 MixStyle 都只能在部分目标域取得收益，而本项目的轻量 Fourier Amplitude Augmentation 是当前唯一在 CASIA、MSU-MFSD 和 Replay-Attack 三个未见目标域上同时改善 Accuracy、AUC 与 EER 的方案。其三个目标域宏平均 AUC 最高、宏平均 EER 最低，因此将 Fourier 作为本项目当前推荐的泛化增强方法。\n\n')
         f.write('同时需要保留实验边界：Fourier 并未完全解决跨域问题，尤其 CASIA 的绝对 AUC 仍低于 0.5。因此最终报告应表述为“跨域泛化得到稳定改善”，而不是“已经解决跨域泛化”。\n')
 
     save_grouped_bar('accuracy', cross, 'Accuracy (%)', 'accuracy_comparison.png')
