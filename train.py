@@ -9,6 +9,7 @@ from torch.optim import AdamW
 from torch.utils.data import DataLoader
 
 from datasets import FASImageDataset, scan_dataset, split_by_group
+from dg_methods import fourier_amplitude_mix
 from metrics import save_plots_and_metrics
 from model import build_resnet18
 
@@ -27,17 +28,43 @@ def parse_args():
     p.add_argument('--image_size', type=int, default=224)
     p.add_argument('--patience', type=int, default=5)
     p.add_argument('--augmentation', choices=['baseline', 'strong', 'appearance'], default='baseline')
+    p.add_argument('--method', choices=['baseline', 'mixstyle', 'fourier'], default='baseline')
+    p.add_argument('--mixstyle_p', type=float, default=0.5)
+    p.add_argument('--mixstyle_alpha', type=float, default=0.1)
+    p.add_argument('--fourier_p', type=float, default=0.5)
+    p.add_argument('--fourier_max_lambda', type=float, default=0.35)
+    p.add_argument('--fourier_low_freq_ratio', type=float, default=0.10)
     p.add_argument('--no_pretrained', action='store_true')
     p.add_argument('--live_keywords', nargs='+', default=['live','real','genuine','positive'])
     p.add_argument('--spoof_keywords', nargs='+', default=['spoof','attack','fake','negative'])
     return p.parse_args()
 
 
-def run_epoch(model, loader, criterion, optimizer, device, train=True):
+def run_epoch(
+    model,
+    loader,
+    criterion,
+    optimizer,
+    device,
+    train=True,
+    method='baseline',
+    fourier_p=0.5,
+    fourier_max_lambda=0.35,
+    fourier_low_freq_ratio=0.10,
+):
     model.train(train)
     total_loss, ys, probs = 0.0, [], []
     for x, y, _, _ in loader:
         x, y = x.to(device), y.to(device)
+
+        if train and method == 'fourier':
+            x = fourier_amplitude_mix(
+                x,
+                p=fourier_p,
+                max_lambda=fourier_max_lambda,
+                low_freq_ratio=fourier_low_freq_ratio,
+            )
+
         if train:
             optimizer.zero_grad(set_to_none=True)
         logits = model(x)
@@ -69,6 +96,7 @@ def main():
         json.dump({
             'dataset': args.dataset,
             'augmentation': args.augmentation,
+            'method': args.method,
             'total_images': len(samples),
             'train_images': len(train_s), 'val_images': len(val_s), 'test_images': len(test_s),
             'train_groups': len(set(x[2] for x in train_s)),
@@ -90,7 +118,12 @@ def main():
     val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, pin_memory=pin_memory)
     test_loader = DataLoader(test_ds, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, pin_memory=pin_memory)
 
-    model = build_resnet18(pretrained=not args.no_pretrained).to(device)
+    model = build_resnet18(
+        pretrained=not args.no_pretrained,
+        mixstyle=(args.method == 'mixstyle'),
+        mixstyle_p=args.mixstyle_p,
+        mixstyle_alpha=args.mixstyle_alpha,
+    ).to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
@@ -98,9 +131,31 @@ def main():
     bad_epochs = 0
     history = []
     for epoch in range(1, args.epochs + 1):
-        tr_loss, tr_acc, _, _ = run_epoch(model, train_loader, criterion, optimizer, device, True)
+        tr_loss, tr_acc, _, _ = run_epoch(
+            model,
+            train_loader,
+            criterion,
+            optimizer,
+            device,
+            True,
+            method=args.method,
+            fourier_p=args.fourier_p,
+            fourier_max_lambda=args.fourier_max_lambda,
+            fourier_low_freq_ratio=args.fourier_low_freq_ratio,
+        )
         with torch.no_grad():
-            va_loss, va_acc, _, _ = run_epoch(model, val_loader, criterion, optimizer, device, False)
+            va_loss, va_acc, _, _ = run_epoch(
+                model,
+                val_loader,
+                criterion,
+                optimizer,
+                device,
+                False,
+                method=args.method,
+                fourier_p=args.fourier_p,
+                fourier_max_lambda=args.fourier_max_lambda,
+                fourier_low_freq_ratio=args.fourier_low_freq_ratio,
+            )
         row = {'epoch': epoch, 'train_loss': tr_loss, 'train_acc': tr_acc, 'val_loss': va_loss, 'val_acc': va_acc}
         history.append(row)
         print(row)
@@ -120,9 +175,21 @@ def main():
     ckpt = torch.load(out / 'best.pth', map_location=device)
     model.load_state_dict(ckpt['model'])
     with torch.no_grad():
-        _, _, y_true, y_score = run_epoch(model, test_loader, criterion, optimizer, device, False)
+        _, _, y_true, y_score = run_epoch(
+            model,
+            test_loader,
+            criterion,
+            optimizer,
+            device,
+            False,
+            method=args.method,
+            fourier_p=args.fourier_p,
+            fourier_max_lambda=args.fourier_max_lambda,
+            fourier_low_freq_ratio=args.fourier_low_freq_ratio,
+        )
     metrics = save_plots_and_metrics(y_true, y_score, out, prefix='test')
     metrics['augmentation'] = args.augmentation
+    metrics['method'] = args.method
     print('Test metrics:', metrics)
 
 
