@@ -36,8 +36,20 @@ class MixStyle(nn.Module):
         return x_norm * sig_mix + mu_mix
 
 
+def _same_class_permutation(labels):
+    """Build a donor permutation that mixes samples only within the same class."""
+    b = labels.numel()
+    perm = torch.arange(b, device=labels.device)
+    for cls in labels.unique():
+        idx = torch.nonzero(labels == cls, as_tuple=False).flatten()
+        if idx.numel() > 1:
+            perm[idx] = idx[torch.randperm(idx.numel(), device=labels.device)]
+    return perm
+
+
 def fourier_amplitude_mix(
     x,
+    labels=None,
     p=0.5,
     max_lambda=0.35,
     low_freq_ratio=0.10,
@@ -45,9 +57,10 @@ def fourier_amplitude_mix(
     """
     Mix only the low-frequency amplitude spectrum between training samples.
 
-    The original phase is retained, so the spatial/content structure mainly
-    comes from the original sample while low-frequency appearance statistics
-    are diversified. Input/output tensors follow ImageNet normalization.
+    When labels are provided, donors are selected within the same class to avoid
+    mixing Live/Spoof semantics. The original phase and high-frequency amplitude
+    are retained, while low-frequency appearance statistics are diversified.
+    Input/output tensors follow ImageNet normalization.
     """
     if x.ndim != 4 or x.size(0) < 2:
         return x
@@ -64,7 +77,10 @@ def fourier_amplitude_mix(
     amplitude_shift = torch.fft.fftshift(amplitude, dim=(-2, -1))
 
     b, _, h, w = image.shape
-    perm = torch.randperm(b, device=x.device)
+    if labels is not None:
+        perm = _same_class_permutation(labels)
+    else:
+        perm = torch.randperm(b, device=x.device)
     lam = torch.rand((b, 1, 1, 1), device=x.device, dtype=x.dtype) * max_lambda
 
     half_h = max(1, int(round(h * low_freq_ratio / 2.0)))
