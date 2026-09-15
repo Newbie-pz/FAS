@@ -4,6 +4,8 @@
 
 > **命名说明**：为保持图表和 CSV 简洁，本自动分析文件仍使用 `Strong / Appearance / MixStyle / Fourier` 简称。其中 `Strong` 指本项目自定义的 **Strong Data Augmentation**；`Appearance` 指本项目自定义的 **Appearance Randomization**（早期文档称 Appearance Augmentation）；`MixStyle` 是已有正式方法名，本项目做轻量 ResNet18 集成；`Fourier` 指本项目实现的轻量 **Fourier Amplitude Augmentation**，不代表完整复现某篇频域 FAS 方法。完整实现见仓库根目录 [`METHOD_IMPLEMENTATION.md`](../METHOD_IMPLEMENTATION.md)。
 
+> **数据协议说明**：本分析从已经整理好的 `ProcessedData` 开始，五种方法共享相同的数据入口和 Subject-disjoint 划分。原始视频抽帧、Face Detection 和 Face Crop 的历史参数未保留在当前仓库，数据来源、不可追溯项和只读质量审计流程见 [`DATA_PREPROCESSING.md`](../DATA_PREPROCESSING.md)。
+
 ## 一、方法与单变量改动
 
 | 方法简称 | 相对 Baseline 的主要改动 |
