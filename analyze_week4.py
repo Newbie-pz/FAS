@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+from matplotlib import font_manager as fm
 import numpy as np
 
 
@@ -37,6 +38,37 @@ METHODS = {
 TARGET_ORDER = ['CASIA', 'MSU-MFSD', 'Replay-Attack']
 METRICS = ['accuracy', 'auc', 'eer']
 OUT = Path('outputs_week4')
+
+
+def configure_plot_font():
+    """Use an installed CJK font when available; otherwise use English plot text."""
+    candidates = [
+        'Noto Sans CJK SC',
+        'Noto Sans CJK JP',
+        'Source Han Sans SC',
+        'Source Han Sans CN',
+        'WenQuanYi Micro Hei',
+        'SimHei',
+        'Microsoft YaHei',
+        'Arial Unicode MS',
+    ]
+    available = {font.name for font in fm.fontManager.ttflist}
+    for name in candidates:
+        if name in available:
+            plt.rcParams['font.sans-serif'] = [name, 'DejaVu Sans']
+            plt.rcParams['axes.unicode_minus'] = False
+            print(f'绘图字体: {name}（支持中文）')
+            return True
+
+    print('未检测到可用中文字体，图表标题与标签自动使用英文；实验数据不受影响。')
+    return False
+
+
+PLOT_CHINESE = configure_plot_font()
+
+
+def plot_text(chinese, english):
+    return chinese if PLOT_CHINESE else english
 
 
 def require_file(path: Path):
@@ -88,7 +120,7 @@ def save_grouped_bar(metric, results, ylabel, filename):
     ax.set_xticks(x)
     ax.set_xticklabels(TARGET_ORDER)
     ax.set_ylabel(ylabel)
-    ax.set_title(f'跨数据集 {ylabel} 对比')
+    ax.set_title(plot_text(f'跨数据集 {ylabel} 对比', f'Cross-dataset {ylabel} Comparison'))
     ax.legend(ncol=3)
     ax.grid(axis='y', alpha=0.25)
     fig.tight_layout()
@@ -102,7 +134,7 @@ def save_macro_bar(metric, macro, ylabel, filename, lower_is_better=False):
     fig, ax = plt.subplots(figsize=(10, 5.5))
     bars = ax.bar(methods, values)
     ax.set_ylabel(ylabel)
-    ax.set_title(f'三个目标域宏平均 {ylabel}')
+    ax.set_title(plot_text(f'三个目标域宏平均 {ylabel}', f'Macro-average {ylabel} Across Three Target Domains'))
     ax.grid(axis='y', alpha=0.25)
 
     best_idx = int(np.argmin(values) if lower_is_better else np.argmax(values))
@@ -140,7 +172,9 @@ def save_delta_heatmap(cross):
         data.append(auc_delta)
         row_labels.append(f'{method} ΔAUC')
         data.append(eer_gain)
-        row_labels.append(f'{method} EER降低')
+        row_labels.append(
+            f'{method} EER降低' if PLOT_CHINESE else f'{method} EER Gain'
+        )
 
     arr = np.asarray(data, dtype=float)
     bound = max(abs(arr.min()), abs(arr.max()), 1.0)
@@ -151,13 +185,20 @@ def save_delta_heatmap(cross):
     ax.set_xticklabels(TARGET_ORDER)
     ax.set_yticks(np.arange(len(row_labels)))
     ax.set_yticklabels(row_labels)
-    ax.set_title('相对 Baseline 的跨域提升矩阵（百分点）')
+    ax.set_title(plot_text(
+        '相对 Baseline 的跨域提升矩阵（百分点）',
+        'Cross-domain Improvement vs Baseline (percentage points)',
+    ))
 
     for i in range(arr.shape[0]):
         for j in range(arr.shape[1]):
             ax.text(j, i, f'{arr[i, j]:+.2f}', ha='center', va='center', fontsize=9)
 
-    fig.colorbar(im, ax=ax, label='提升百分点（正值为改善）')
+    fig.colorbar(
+        im,
+        ax=ax,
+        label=plot_text('提升百分点（正值为改善）', 'Improvement (pp; positive is better)'),
+    )
     fig.tight_layout()
     fig.savefig(OUT / 'improvement_heatmap.png', dpi=220)
     plt.close(fig)
