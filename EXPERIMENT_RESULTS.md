@@ -1,188 +1,174 @@
 # 实验结果记录
 
-本文档用于持续记录 FAS 项目的各阶段实验结果，便于后续撰写实验报告、进行横向对比与复现实验。
+本文档汇总 FAS 项目第一至第四周的正式实验结果。更详细的阶段性分析见 [`WEEK3_FINAL_REPORT.md`](WEEK3_FINAL_REPORT.md) 和 [`WEEK4_REPORT.md`](WEEK4_REPORT.md)。
 
 ## 第一周：单数据集 Baseline
 
-第一周目标是使用 ResNet18 完成 Live / Spoof 二分类 Baseline，并在严格避免 Subject 泄漏的前提下完成同域测试。当前正式结果采用 OULU-NPU 数据集的 Subject-disjoint 划分结果。
+第一周使用 ResNet18 在 OULU-NPU 上完成 Live / Spoof 二分类。数据采用自定义 Subject-disjoint 70/15/15 划分，避免同一 Subject 同时出现在 Train、Validation、Test 中。
 
-| 实验编号 | 数据集 | 模型 | 划分方式 | 输入尺寸 | Accuracy | AUC | EER | EER Threshold | Test Spoof | Test Live | 错误样本数 |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| W1-OULU-R18-001 | OULU-NPU | ResNet18 | Subject-disjoint 70/15/15 | 224×224 | 99.8161% | 99.9999% | 0.0526% | 0.643187 | 7630 | 3787 | 21 |
+| 实验编号 | 训练/测试数据集 | 模型 | 划分方式 | Accuracy | AUC | EER | EER Threshold |
+|---|---|---|---|---:|---:|---:|---:|
+| W1-OULU-R18-001 | OULU-NPU | ResNet18 | Subject-disjoint 70/15/15 | 99.8161% | 99.9999% | 0.0526% | 0.643187 |
 
-### 第一周混淆矩阵
+混淆矩阵：
 
 | 真实类别 | 预测 Spoof | 预测 Live |
 |---|---:|---:|
 | Spoof | 7609 | 21 |
 | Live | 0 | 3787 |
 
-由结果可见，本次测试中 21 个 Spoof 样本被错误预测为 Live，Live 样本全部分类正确。
-
-### 第一周实验设置
-
-| 参数 | 数值 |
-|---|---|
-| `model` | `ResNet18` |
-| `image_size` | `224` |
-| `batch_size` | `64` |
-| `epochs` | `20` |
-| `lr` | `1e-4` |
-| `weight_decay` | `1e-4` |
-| `patience` | `5` |
-| `seed` | `42` |
-| `optimizer` | `AdamW` |
-| `pretrained` | `ImageNet` |
-| `train_ratio` | `0.70` |
-| `val_ratio` | `0.15` |
-| `test_ratio` | `0.15` |
-
-训练在第 8 个 epoch 触发 Early Stopping。Subject-disjoint 划分后，同一个 Subject 不会同时出现在 Train、Validation 和 Test 中，因此该结果可作为第一周正式 Baseline。
+第一周结果说明模型在同域条件下具有很强判别能力，但不能据此判断跨数据集泛化能力。
 
 ---
 
-## 第二周：跨数据集泛化实验
+## 第二周：跨数据集 Baseline
 
-第二周目标是验证第一周 Baseline 在未参与训练的新数据集上的泛化能力。实验采用 Source-only 设置：模型只在 OULU-NPU 上训练，CASIA、MSU-MFSD 和 Replay-Attack 仅作为目标域测试集，测试过程中不进行训练、微调或参数更新。
+第二周固定第一周训练得到的 OULU-NPU 模型参数，直接在 CASIA、MSU-MFSD 和 Replay-Attack 上测试。目标域不参与训练、微调或参数更新。
 
-### 第二周正式结果
+| 实验编号 | 训练数据集 | 测试数据集 | Accuracy | AUC | EER | EER Threshold |
+|---|---|---|---:|---:|---:|---:|
+| W2-OULU-CASIA-001 | OULU-NPU | CASIA | 28.0648% | 23.4007% | 69.8964% | 0.666826 |
+| W2-OULU-MSU-001 | OULU-NPU | MSU-MFSD | 60.9356% | 64.0805% | 41.6813% | 0.251069 |
+| W2-OULU-REPLAY-001 | OULU-NPU | Replay-Attack | 48.2725% | 39.1893% | 54.5629% | 0.006060 |
 
-| 实验编号 | 训练数据集 | 测试数据集 | 模型 | 训练方式 | 测试图像数 | Accuracy | AUC | EER | EER Threshold |
-|---|---|---|---|---|---:|---:|---:|---:|---:|
-| W2-OULU-CASIA-001 | OULU-NPU | CASIA | ResNet18 | Source-only | 11110 | 28.0648% | 23.4007% | 69.8964% | 0.666826 |
-| W2-OULU-MSU-001 | OULU-NPU | MSU-MFSD | ResNet18 | Source-only | 4019 | 60.9356% | 64.0805% | 41.6813% | 0.251069 |
-| W2-OULU-REPLAY-001 | OULU-NPU | Replay-Attack | ResNet18 | Source-only | 19508 | 48.2725% | 39.1893% | 54.5629% | 0.006060 |
+与同域 Baseline 相比，三个目标域性能均显著下降，说明模型存在明显的域依赖问题。可能的域偏移来源包括摄像设备、光照、攻击介质、颜色分布、压缩和预处理差异。
 
-### 同域与跨域对比
+---
 
-| 场景 | 训练数据集 | 测试数据集 | Accuracy | AUC | EER |
-|---|---|---|---:|---:|---:|
-| 同域 Baseline | OULU-NPU | OULU-NPU | 99.8161% | 99.9999% | 0.0526% |
-| 跨域 | OULU-NPU | CASIA | 28.0648% | 23.4007% | 69.8964% |
-| 跨域 | OULU-NPU | MSU-MFSD | 60.9356% | 64.0805% | 41.6813% |
-| 跨域 | OULU-NPU | Replay-Attack | 48.2725% | 39.1893% | 54.5629% |
+## 第三周：泛化增强方法探索
 
-### 性能下降幅度
+第三周保持 ResNet18、OULU-NPU 源域训练、Subject-disjoint 划分和 Source-only 跨数据集评价协议不变，依次测试四类泛化增强策略：
 
-相对于 OULU-NPU 同域 Baseline：
+1. Strong Augmentation：更强的空间域随机增强；
+2. Appearance Augmentation：外观/成像风格随机化；
+3. MixStyle：浅层特征均值与方差混合；
+4. Fourier Amplitude Augmentation：同类别样本之间低频幅度谱混合，并保留原相位。
 
-| 测试数据集 | Accuracy 下降 | AUC 下降 | EER 上升 |
+### 3.1 同域结果
+
+| 方法 | OULU-NPU Accuracy | OULU-NPU AUC | OULU-NPU EER |
 |---|---:|---:|---:|
-| CASIA | 71.7513 个百分点 | 76.5992 个百分点 | 69.8438 个百分点 |
-| MSU-MFSD | 38.8805 个百分点 | 35.9194 个百分点 | 41.6287 个百分点 |
-| Replay-Attack | 51.5436 个百分点 | 60.8106 个百分点 | 54.5103 个百分点 |
+| Baseline | 99.8161% | 99.9999% | 0.0526% |
+| Strong | 95.3052% | 99.9971% | 0.2104% |
+| Appearance | 97.4074% | 99.9624% | 1.0721% |
+| MixStyle | 98.5898% | 99.9914% | 0.5920% |
+| Fourier | 98.5373% | 99.9715% | 0.8814% |
 
-### 第二周结果分析
+### 3.2 跨数据集结果
 
-第一周同域实验中，ResNet18 在 OULU-NPU 上取得了接近完全正确的分类结果，但当模型直接迁移到未参与训练的数据集后，性能出现显著下降，说明模型在源域中学习到的判别特征具有较强的数据集依赖性。
+#### CASIA
 
-在三个目标域中，MSU-MFSD 的跨域表现相对最好，Accuracy 为 60.9356%，AUC 为 64.0805%，EER 为 41.6813%；Replay-Attack 次之，Accuracy 为 48.2725%，AUC 为 39.1893%，EER 为 54.5629%；CASIA 的跨域性能最差，Accuracy 仅为 28.0648%，AUC 为 23.4007%，EER 达到 69.8964%。这表明不同目标数据集与 OULU-NPU 之间存在程度不同的分布偏移。
+| 方法 | Accuracy | AUC | EER |
+|---|---:|---:|---:|
+| Baseline | 28.0648% | 23.4007% | 69.8964% |
+| Strong | **61.2061%** | **41.9301%** | **55.6456%** |
+| Appearance | 40.0720% | 38.3534% | 58.6650% |
+| MixStyle | 38.5779% | 32.0224% | 63.1936% |
+| Fourier | 33.6994% | 31.6763% | 64.5885% |
 
-造成跨数据集性能下降的潜在因素包括摄像设备差异、光照条件差异、攻击介质差异、图像质量差异、颜色分布差异、压缩与重采样过程差异，以及不同数据集的人脸裁切和预处理差异。ResNet18 在单一源域训练时可能同时学习到真正的活体线索和数据集特有的纹理、颜色、设备或成像特征，因此这些特征在新数据集上无法稳定保持。
+#### MSU-MFSD
 
-值得注意的是，CASIA 和 Replay-Attack 的 AUC 均低于 0.5。这不仅表示模型区分能力较弱，还说明在这些目标域上，模型输出分数与真实类别之间可能出现较强的排序反转现象。因此，仅观察 Accuracy 不足以完整反映跨域泛化能力，AUC 和 EER 对分析域偏移非常重要。
+| 方法 | Accuracy | AUC | EER |
+|---|---:|---:|---:|
+| Baseline | 60.9356% | 64.0805% | 41.6813% |
+| Strong | 68.2259% | 60.1555% | 41.6844% |
+| Appearance | 56.2080% | 56.6613% | 45.4044% |
+| MixStyle | 65.6133% | 59.3304% | 42.4321% |
+| Fourier | **75.2924%** | **65.7463%** | **39.5778%** |
 
-### 第二周结论
+#### Replay-Attack
 
-本实验成功建立了 OULU-NPU 到 CASIA、MSU-MFSD 和 Replay-Attack 的跨数据集评价流程。实验结果表明，ResNet18 在 OULU-NPU 同域测试中虽然能够获得 99.8161% Accuracy 和 99.9999% AUC，但在三个未见目标域上的性能均大幅下降，说明模型存在显著的域依赖问题，跨数据集泛化能力不足。
+| 方法 | Accuracy | AUC | EER |
+|---|---:|---:|---:|
+| Baseline | 48.2725% | 39.1893% | 54.5629% |
+| Strong | 49.1234% | 38.8743% | 54.8851% |
+| Appearance | 55.5157% | 46.4997% | 51.1434% |
+| MixStyle | 56.5870% | 48.3348% | 51.1476% |
+| Fourier | **66.2087%** | **63.8448%** | **41.0995%** |
 
----
+### 3.3 三个目标域宏平均
 
-## 第三周：泛化增强实验
+| 方法 | 平均 Accuracy | 平均 AUC | 平均 EER |
+|---|---:|---:|---:|
+| Baseline | 45.7576% | 42.2235% | 55.3802% |
+| Strong | **59.5185%** | 46.9866% | 50.7384% |
+| Appearance | 50.5986% | 47.1715% | 51.7376% |
+| MixStyle | 53.5927% | 46.5625% | 52.2578% |
+| Fourier | 58.4002% | **53.7558%** | **48.4219%** |
 
-第三周在保持 ResNet18、Subject-disjoint 数据划分、优化器、训练超参数以及 Source-only 跨数据集评价协议不变的前提下，只修改训练阶段的数据增强策略，从而验证更强的数据扰动能否降低模型对单一源域外观统计特征的依赖，并提升跨数据集泛化能力。
+### 3.4 三域一致性
 
-### 强数据增强策略
+相对 Baseline，在一个目标域上同时满足 Accuracy 上升、AUC 上升和 EER 下降，记为一次“完整改善”。
 
-第三周第一组实验使用 `augmentation=strong`。训练阶段在 Baseline 的基础上使用更强的随机扰动：
+| 方法 | CASIA | MSU-MFSD | Replay-Attack | 完整改善数量 |
+|---|---|---|---|---:|
+| Strong | 是 | 否 | 否 | 1/3 |
+| Appearance | 是 | 否 | 是 | 2/3 |
+| MixStyle | 是 | 否 | 是 | 2/3 |
+| Fourier | **是** | **是** | **是** | **3/3** |
 
-- `RandomResizedCrop`：随机改变裁切区域与局部尺度；
-- `RandomHorizontalFlip`：随机水平翻转；
-- `ColorJitter`：增强亮度、对比度、饱和度与色调变化；
-- `RandomGrayscale`：随机灰度化，降低模型对固定颜色分布的依赖；
-- `GaussianBlur`：模拟成像模糊与不同清晰度；
-- `RandomErasing`：随机遮挡局部区域，抑制模型过度依赖单一区域纹理。
+Fourier 是目前唯一在三个未见目标域上均实现三项指标方向一致改善的方法。
 
-验证集、同域测试集和跨域目标数据均不使用随机增强，保证评价协议与第一、二周一致。
+### 3.5 Fourier 相对 Baseline 的提升
 
-### 第三周正式结果
+| 目标域 | Accuracy 提升 | AUC 提升 | EER 降低 |
+|---|---:|---:|---:|
+| CASIA | +5.6346 pp | +8.2756 pp | 5.3079 pp |
+| MSU-MFSD | +14.3568 pp | +1.6658 pp | 2.1035 pp |
+| Replay-Attack | +17.9362 pp | +24.6555 pp | 13.4634 pp |
 
-| 实验编号 | 训练数据集 | 测试数据集 | 模型 | 增强方式 | Accuracy | AUC | EER | EER Threshold |
-|---|---|---|---|---|---:|---:|---:|---:|
-| W3-OULU-OULU-STRONG-001 | OULU-NPU | OULU-NPU | ResNet18 | Strong Augmentation | 95.3052% | 99.9971% | 0.2104% | 0.999575 |
-| W3-OULU-CASIA-STRONG-001 | OULU-NPU | CASIA | ResNet18 | Strong Augmentation | 61.2061% | 41.9301% | 55.6456% | 0.020793 |
-| W3-OULU-MSU-STRONG-001 | OULU-NPU | MSU-MFSD | ResNet18 | Strong Augmentation | 68.2259% | 60.1555% | 41.6844% | 0.005923 |
-| W3-OULU-REPLAY-STRONG-001 | OULU-NPU | Replay-Attack | ResNet18 | Strong Augmentation | 49.1234% | 38.8743% | 54.8851% | 0.002559 |
+三域宏平均相对 Baseline：Accuracy +12.6425 pp，AUC +11.5323 pp，EER 降低 6.9583 pp。
 
-第三周同域测试混淆矩阵为：
+第三周最终推荐 Fourier Amplitude Augmentation，原因是其跨目标域改善一致性最好。需要保留实验边界：CASIA 上 Fourier 的绝对 AUC 仍低于 0.5，因此应表述为“稳定改善跨域泛化”，而不是“解决跨域泛化问题”。
 
-| 真实类别 | 预测 Spoof | 预测 Live |
-|---|---:|---:|
-| Spoof | 7094 | 536 |
-| Live | 0 | 3787 |
-
-Strong Augmentation 模型在第 17 个 epoch 触发 Early Stopping。
-
-### 第二周 Baseline 与第三周 Strong Augmentation 对比
-
-| 目标数据集 | Baseline Accuracy | Strong Accuracy | Accuracy 变化 | Baseline AUC | Strong AUC | AUC 变化 | Baseline EER | Strong EER | EER 变化 |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| CASIA | 28.0648% | 61.2061% | +33.1413 个百分点 | 23.4007% | 41.9301% | +18.5294 个百分点 | 69.8964% | 55.6456% | -14.2508 个百分点 |
-| MSU-MFSD | 60.9356% | 68.2259% | +7.2903 个百分点 | 64.0805% | 60.1555% | -3.9250 个百分点 | 41.6813% | 41.6844% | +0.0031 个百分点 |
-| Replay-Attack | 48.2725% | 49.1234% | +0.8509 个百分点 | 39.1893% | 38.8743% | -0.3150 个百分点 | 54.5629% | 54.8851% | +0.3222 个百分点 |
-
-同域 OULU-NPU 的 Accuracy 从 99.8161% 降至 95.3052%，下降 4.5109 个百分点；AUC 仍接近 1，但 EER 从 0.0526% 上升到 0.2104%。这说明更强的数据扰动确实降低了模型对源域数据的拟合程度。
-
-### 第三周结果分析
-
-Strong Augmentation 对跨数据集泛化的影响具有明显的目标域差异，并未形成一致提升。
-
-在 CASIA 上，Strong Augmentation 带来了最明显的改善：Accuracy 从 28.0648% 提升到 61.2061%，AUC 从 23.4007% 提升到 41.9301%，EER 从 69.8964% 降低到 55.6456%。三项指标同时向更好的方向变化，说明随机尺度、颜色、灰度、模糊和局部遮挡等扰动在一定程度上减少了模型对 OULU-NPU 特定外观分布的依赖，使模型在 CASIA 上获得了更好的迁移能力。
-
-在 MSU-MFSD 上，Accuracy 从 60.9356% 提升到 68.2259%，但 AUC 从 64.0805% 下降到 60.1555%，EER 基本不变。这说明固定阈值 0.5 下的分类结果有所改善，但模型整体预测分数的排序能力并没有增强。因此，不能只依据 Accuracy 判断该目标域上的泛化能力得到提升。
-
-在 Replay-Attack 上，Accuracy 仅提升 0.8509 个百分点，而 AUC 略有下降、EER 略有上升，整体可视为基本无改善。说明当前强增强中模拟的外观扰动不足以覆盖 Replay-Attack 与 OULU-NPU 之间的主要域差异。
-
-综合三个目标域，Strong Augmentation 能够显著改善部分目标域，但不能保证跨域性能稳定提升。该结果说明单纯增加增强强度并不等价于获得稳定的域泛化能力。不同数据集之间的域偏移可能来自不同因素，而过强的随机裁切、模糊或遮挡也可能破坏对 FAS 有意义的细粒度纹理和攻击介质特征。
-
-### 第三周阶段性结论
-
-第三周第一组实验验证了数据增强具有一定的泛化改善潜力，但效果具有明显的数据集依赖性。Strong Augmentation 在 CASIA 上取得显著提升，却没有同步改善 MSU-MFSD 和 Replay-Attack 的 AUC 与 EER。因此，本组结果应表述为“部分改善跨数据集泛化，但泛化一致性不足”，而不应表述为“全面提升跨数据集性能”。
-
-该现象也提示后续增强策略应避免简单叠加强扰动，更适合针对 FAS 的域偏移特征设计更有针对性的外观/风格随机化，同时尽量保留与真假人脸判别有关的局部纹理信息。
-
-### 实验规范说明
-
-第二、三周的 CASIA、MSU-MFSD 和 Replay-Attack 均作为目标测试域。为保证实验解释严谨，不应根据某一个目标测试集的结果反复调参并最终只报告最优配置。后续若继续探索不同增强策略，应完整保留各组实验结果，并将其作为探索性对比，而不是使用目标测试集进行隐式参数选择。
-
-### 第三周运行方式
-
-```bash
-bash scripts/run_week3_generalization.sh
-```
-
-训练模型保存于：
-
-```text
-outputs_week3/strong/OULU-NPU/
-```
-
-跨域结果保存于：
-
-```text
-outputs_week3_cross/strong/
-```
-
-第二周与第三周差值对比文件：
-
-```text
-outputs_week3_cross/strong/week3_comparison.md
-```
+详细分析见 [`WEEK3_FINAL_REPORT.md`](WEEK3_FINAL_REPORT.md)。
 
 ---
 
-## 后续实验记录模板
+## 第四周：统一对比、消融式分析与可视化
 
-| 实验编号 | 训练数据集 | 测试数据集 | 模型 | 方法/改动 | Accuracy | AUC | EER | 备注 |
-|---|---|---|---|---|---:|---:|---:|---|
-| 待补充 | 待补充 | 待补充 | ResNet18 | 泛化增强 / 消融 | - | - | - | - |
+第四周不再新增训练方法，而是统一分析 Baseline、Strong、Appearance、MixStyle 和 Fourier 五组实验。
+
+第四周正式输出目录：[`outputs_week4/`](outputs_week4/)
+
+主要文件：
+
+- `week4_all_results.csv`：五种方法全部同域/跨域指标；
+- `week4_macro_summary.csv`：三个目标域宏平均；
+- `week4_domain_best.csv`：每个目标域各指标最优方法；
+- `week4_analysis.md`：自动生成的第四周结果分析；
+- `accuracy_comparison.png`：跨域 Accuracy 对比；
+- `auc_comparison.png`：跨域 AUC 对比；
+- `eer_comparison.png`：跨域 EER 对比；
+- `macro_accuracy.png` / `macro_auc.png` / `macro_eer.png`：宏平均对比；
+- `improvement_heatmap.png`：相对 Baseline 的 AUC 提升与 EER 降低热力图。
+
+### 第四周核心结论
+
+- Strong 的三域平均 Accuracy 最高，为 59.5185%；
+- Fourier 的三域平均 AUC 最高，为 53.7558%；
+- Fourier 的三域平均 EER 最低，为 48.4219%；
+- Fourier 是唯一在 CASIA、MSU-MFSD、Replay-Attack 三个目标域上都同时实现 Accuracy↑、AUC↑、EER↓ 的方法；
+- 因此，Fourier 是当前项目跨域改善一致性最好的推荐方案。
+
+完整第四周报告见 [`WEEK4_REPORT.md`](WEEK4_REPORT.md)。
+
+---
+
+## 实验产物管理建议
+
+适合提交到 GitHub 的内容包括：
+
+- `*.json`：训练历史、划分摘要、指标；
+- `*.csv`：跨域结果汇总、宏平均、最优方法汇总；
+- `*.md`：实验报告与自动分析；
+- `*.png`：ROC、混淆矩阵、对比图、热力图；
+- 实验脚本与分析脚本。
+
+不建议提交：
+
+- `ProcessedData/`、`RawData/` 等原始/处理后数据集；
+- `*.pth`、`*.pt`、`*.ckpt` 等模型权重；
+- 日志、缓存和临时文件。
+
+当前 `.gitignore` 已排除数据集和模型权重。
