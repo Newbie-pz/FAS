@@ -7,6 +7,8 @@
 
 > **重要命名约定**：`Strong Data Augmentation` 与 `Appearance Randomization` 都是本项目为了组织实验而定义的训练策略名称，并不是具有唯一标准定义的公开算法名。`MixStyle` 是已有正式方法名；`Fourier Amplitude Augmentation` 在本项目中指一个轻量、项目自定义的频域幅度增强实现，不等同于完整复现某篇频域 FAS 论文的全部方法。
 
+> **数据入口说明**：本文档描述的是进入模型训练之后的图像增强和域泛化实现。原始视频到 `ProcessedData` 的历史抽帧、Face Detection 和 Face Crop 参数不在当前仓库中，不能根据现有代码反推。数据预处理边界和质量审计见 [`DATA_PREPROCESSING.md`](DATA_PREPROCESSING.md)。
+
 ---
 
 ## 一、方法总览与命名性质
@@ -543,6 +545,7 @@ Baseline / Strong / Appearance / MixStyle / Fourier
 
 | 内容 | 代码文件 |
 |---|---|
+| 数据入口、预处理边界、质量审计 | `DATA_PREPROCESSING.md`, `scripts/audit_processed_data.py` |
 | Baseline / Strong / Appearance 图像增强 | `datasets.py` |
 | MixStyle 计算 | `dg_methods.py` |
 | MixStyle 插入 ResNet18 | `model.py` |
@@ -552,3 +555,20 @@ Baseline / Strong / Appearance / MixStyle / Fourier
 | 第四周统一分析 | `analyze_week4.py` |
 
 如果后续修改任何增强参数，应同时更新本文档和对应实验报告，避免“代码实现”与“技术报告描述”不一致。
+
+---
+
+## 十二、与数据预处理文档的关系
+
+本文档从“已经进入训练管线的图像”开始描述方法实现。完整的数据链建议在技术报告中拆成两部分：
+
+```text
+原始视频/图像
+→ 已有抽帧与人脸区域预处理
+→ ProcessedData
+→ 数据质量审计 + Subject-disjoint 划分
+→ Baseline / Strong / Appearance / MixStyle / Fourier
+→ 同域与跨域评估
+```
+
+其中前半部分的数据来源、不可追溯项和当前可复现审计见 [`DATA_PREPROCESSING.md`](DATA_PREPROCESSING.md)；后半部分的训练与域泛化机制由本文档负责。这样可以避免把“历史预处理”和“当前模型训练代码”混写成一个并不存在的端到端流水线。
