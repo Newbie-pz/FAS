@@ -1,0 +1,4 @@
+﻿target_dataset,best_accuracy_method,best_accuracy,best_auc_method,best_auc,best_eer_method,best_eer
+CASIA,Strong,0.6120612061206121,Strong,0.4193008970474663,Strong,0.5564563654725836
+MSU-MFSD,Fourier,0.7529236128390147,Fourier,0.6574626392563008,Fourier,0.395777661230572
+Replay-Attack,Fourier,0.6620873487799877,Fourier,0.6384479087477679,Fourier,0.41099462104202394
