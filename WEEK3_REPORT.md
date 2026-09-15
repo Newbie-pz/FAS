@@ -2,6 +2,8 @@
 
 > **命名说明**：本报告中的 `Strong Data Augmentation` 与 `Appearance Randomization` 是本项目自定义的训练策略名称，不是具有固定公开定义的标准算法名。早期记录中的 `Strong Augmentation` 与 `Appearance Augmentation` 分别对应这两套相同代码配置。具体算子、参数和代码位置见 [`METHOD_IMPLEMENTATION.md`](METHOD_IMPLEMENTATION.md)。
 
+> **数据入口说明**：第三周所有实验都从已经整理好的 `ProcessedData` 开始，训练前的数据来源、可追溯边界和质量审计统一见 [`DATA_PREPROCESSING.md`](DATA_PREPROCESSING.md)。原始视频抽帧 FPS、Face Detector 型号和 bbox 扩展参数没有保留在当前仓库，因此本报告不对这些历史参数作推断性描述。
+
 ## 一、实验目标
 
 第三周在保持 ResNet18、OULU-NPU 源数据集、Subject-disjoint 划分、训练超参数以及 Source-only 跨数据集评价协议不变的前提下，仅改变训练阶段的数据增强策略，用于研究数据增强能否降低模型对源域外观统计特征的依赖，并改善跨数据集泛化能力。
