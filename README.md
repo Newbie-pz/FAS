@@ -35,6 +35,28 @@ ProcessedData/
 
 数据集目录已通过 `.gitignore` 排除，不上传到 GitHub。
 
+### 数据预处理边界
+
+当前仓库从已经完成抽帧和人脸区域预处理的 `ProcessedData` 开始训练与评估。仓库能够完整复现标签读取、Subject/Client 解析、Subject-disjoint 划分、训练、跨域测试和域泛化实验；但原始视频到 `ProcessedData` 的历史抽帧 FPS、Face Detector 型号、bbox 扩展比例等参数没有保留在当前仓库，因此技术报告中不对这些不可追溯信息作推断性描述。
+
+完整说明见 [`DATA_PREPROCESSING.md`](DATA_PREPROCESSING.md)。
+
+为了补齐课程第一周的数据质量检查证据，仓库提供只读审计脚本：
+
+```bash
+bash scripts/run_data_audit.sh
+```
+
+它会检查图像可读性、标签、尺寸、Subject/Group、`frame` 命名痕迹和 Subject-disjoint 可划分性，并生成：
+
+```text
+outputs_data_audit/
+├── processed_data_audit.json
+└── processed_data_audit.md
+```
+
+审计脚本不会修改任何数据。
+
 ## 三、数据划分与泄漏控制
 
 为避免同一视频相邻帧跨集合造成数据泄漏，训练阶段采用 Subject-disjoint 划分，而不是帧级随机划分。
@@ -86,13 +108,37 @@ Baseline 使用 torchvision 的 ResNet18，默认加载 ImageNet 预训练权重
 
 跨域分析中不只看 Accuracy，而重点结合 AUC 和 EER 判断模型排序能力和跨域错误率。
 
-## 六、第一周：OULU-NPU 同域 Baseline
+## 六、第一周：数据审计与 OULU-NPU 同域 Baseline
+
+第一周当前可复现闭环包括：
+
+1. 从 `ProcessedData` 读取处理后人脸帧；
+2. 使用数据审计脚本检查图像可读性、标签、尺寸和 Subject/Group；
+3. 按 Subject-disjoint 70/15/15 建立 Train/Validation/Test；
+4. 使用 ResNet18 完成 Live/Spoof 二分类训练；
+5. 输出 Accuracy、AUC、EER、ROC Curve 和 Confusion Matrix；
+6. 保存训练历史、划分摘要和正式实验记录。
+
+对于课程 PPT 中“原始视频均匀抽帧”和“Face Detector + Face Crop”两项，当前样本文件名能够证明使用的是抽帧后的处理图像，但原始抽帧参数和检测器参数未在当前仓库保留，详细边界见 [`DATA_PREPROCESSING.md`](DATA_PREPROCESSING.md)。
+
+正式 Baseline：
 
 | 数据集 | 模型 | 划分方式 | Accuracy | AUC | EER |
 |---|---|---|---:|---:|---:|
 | OULU-NPU | ResNet18 | Subject-disjoint 70/15/15 | 99.8161% | 99.9999% | 0.0526% |
 
 结果表明模型在 OULU-NPU 同域条件下几乎完全正确，但这不能代表模型具有强跨数据集泛化能力。
+
+第一周正式产物位于：
+
+```text
+outputs/OULU-NPU/
+├── history.json
+├── split_summary.json
+├── test_metrics.json
+├── test_roc.png
+└── test_confusion_matrix.png
+```
 
 ## 七、第二周：跨数据集 Baseline
 
@@ -238,6 +284,7 @@ outputs_week4/
 ```text
 FAS/
 ├── README.md
+├── DATA_PREPROCESSING.md
 ├── METHOD_IMPLEMENTATION.md
 ├── EXPERIMENT_RESULTS.md
 ├── WEEK3_REPORT.md
@@ -253,6 +300,8 @@ FAS/
 ├── compare_week3_results.py
 ├── analyze_week4.py
 ├── scripts/
+│   ├── audit_processed_data.py
+│   ├── run_data_audit.sh
 │   ├── run_week2_cross_dataset.sh
 │   ├── run_week3_generalization.sh
 │   ├── run_week3_appearance.sh
@@ -260,6 +309,10 @@ FAS/
 │   ├── run_week3_fourier.sh
 │   ├── run_week3_extra_methods.sh
 │   └── run_week4_analysis.sh
+├── outputs/
+├── outputs_cross/
+├── outputs_week3/
+├── outputs_week3_cross/
 ├── outputs_week4/
 ├── requirements.txt
 └── .gitignore
@@ -273,7 +326,7 @@ FAS/
 - `*.csv`：实验结果汇总；
 - `*.md`：阶段报告、自动分析；
 - `*.png`：ROC、混淆矩阵、对比图和热力图；
-- 实验与分析脚本。
+- 数据审计、实验与分析脚本。
 
 不提交：
 
@@ -296,6 +349,8 @@ FAS/
 | GPU | `NVIDIA GeForce RTX 4090 D` |
 
 ## 十三、实验记录入口
+
+数据预处理边界与质量审计：[`DATA_PREPROCESSING.md`](DATA_PREPROCESSING.md)
 
 方法命名与实现细节：[`METHOD_IMPLEMENTATION.md`](METHOD_IMPLEMENTATION.md)
 
