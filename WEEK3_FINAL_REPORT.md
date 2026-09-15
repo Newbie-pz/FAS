@@ -2,6 +2,8 @@
 
 > **方法命名与实现口径**：`Strong Data Augmentation` 与 `Appearance Randomization` 是本项目自定义训练策略名称，不是已有标准算法名；早期记录中的 `Strong Augmentation`、`Appearance Augmentation` 分别指同一代码配置。`MixStyle` 是已有正式方法名，本项目将其轻量集成到 ResNet18；`Fourier Amplitude Augmentation` 是本项目实现的轻量频域幅度增强，不等同于完整复现某篇频域 FAS 论文。所有算子、参数、公式、代码位置和推荐技术报告写法见 [`METHOD_IMPLEMENTATION.md`](METHOD_IMPLEMENTATION.md)。
 
+> **数据入口与可追溯边界**：第三周所有模型都从已经整理好的 `ProcessedData` 开始训练。原始视频抽帧参数、Face Detector 型号和 bbox 扩展比例未在当前仓库保留，数据来源说明和质量审计流程见 [`DATA_PREPROCESSING.md`](DATA_PREPROCESSING.md)。本报告只对当前仓库能够复现的训练、划分、增强和评估过程负责。
+
 ## 一、实验目标
 
 第三周的目标是在保持 ResNet18、OULU-NPU 源域训练、Subject-disjoint 划分以及 Source-only 跨数据集测试协议不变的前提下，寻找能够稳定改善跨数据集泛化能力的方法。
