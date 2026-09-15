@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 import argparse
 import json
+import sys
 from collections import Counter
 from pathlib import Path
 
 from PIL import Image, UnidentifiedImageError
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from datasets import IMG_EXTS, infer_label, infer_subject
 
@@ -67,6 +72,11 @@ def audit_dataset(dataset_dir: Path, min_side: int):
             frame_named += 1
 
         try:
+            # verify() should run on an image opened specifically for validation.
+            with Image.open(path) as img:
+                img.verify()
+
+            # Re-open the file for metadata and RGB conversion after verify().
             with Image.open(path) as img:
                 width, height = img.size
                 widths.append(width)
@@ -78,7 +88,6 @@ def audit_dataset(dataset_dir: Path, min_side: int):
                     img.convert('RGB')
                 except Exception:
                     non_rgb_convertible.append(str(path))
-                img.verify()
         except (UnidentifiedImageError, OSError, ValueError) as exc:
             unreadable.append({'path': str(path), 'error': str(exc)})
 
