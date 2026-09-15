@@ -4,6 +4,8 @@
 
 项目当前已经完成第一至第四周实验，进入最终整理与答辩阶段。
 
+> **方法命名说明**：`Strong Data Augmentation` 与 `Appearance Randomization` 是本项目为了组织对照实验而定义的训练策略名称，并非具有唯一标准定义的公开算法名；`MixStyle` 是已有正式方法名；本项目的 `Fourier Amplitude Augmentation` 是轻量、项目自定义的频域增强实现，不等同于完整复现某篇频域 FAS 论文。所有方法的具体算子、参数、作用位置和推荐技术报告表述见 [`METHOD_IMPLEMENTATION.md`](METHOD_IMPLEMENTATION.md)。
+
 ## 一、任务定义
 
 标签约定：
@@ -112,11 +114,13 @@ bash scripts/run_week2_cross_dataset.sh
 
 ## 八、第三周：泛化增强方法
 
-第三周在相同骨干、源数据和评价协议下，测试四种泛化增强策略。
+第三周在相同骨干、源数据和评价协议下，测试四种泛化增强策略。为避免误解，以下名称性质不同：前两种是**本项目定义的训练配置**，MixStyle 是已有正式方法名，Fourier 是本项目实现的轻量频域增强。
 
-### 1. Strong Augmentation
+### 1. Strong Data Augmentation（项目自定义）
 
-加入随机裁切、颜色扰动、灰度化、模糊和 Random Erasing。CASIA 提升明显，但 MSU-MFSD 和 Replay-Attack 的 AUC/EER 改善不稳定。
+代码中对应 `--augmentation strong`。该配置组合随机尺度裁切、较强颜色扰动、灰度化、模糊和 Random Erasing，用于扩大源域的空间与外观变化。它不是某篇论文中具有固定定义的独立算法。
+
+CASIA 提升明显，但 MSU-MFSD 和 Replay-Attack 的 AUC/EER 改善不稳定。
 
 运行：
 
@@ -124,9 +128,11 @@ bash scripts/run_week2_cross_dataset.sh
 bash scripts/run_week3_generalization.sh
 ```
 
-### 2. Appearance Augmentation
+### 2. Appearance Randomization（项目自定义；旧称 Appearance Augmentation）
 
-重点随机化颜色、亮度、对比度、灰度和清晰度，尽量保留完整人脸结构。对 CASIA 和 Replay-Attack 有改善，但 MSU-MFSD 退化。
+代码中对应 `--augmentation appearance`。该配置重点随机化颜色、亮度、对比度、灰度、自动对比度、模糊和锐度，同时不使用 RandomResizedCrop 和 RandomErasing，目的是尽量保留完整人脸结构与细粒度 FAS 纹理。它同样不是已有标准算法名。
+
+对 CASIA 和 Replay-Attack 有改善，但 MSU-MFSD 退化。
 
 运行：
 
@@ -136,7 +142,9 @@ bash scripts/run_week3_appearance.sh
 
 ### 3. MixStyle
 
-在 ResNet18 浅层特征中混合不同样本的通道均值和标准差，扰动域相关风格统计。CASIA、Replay-Attack 有改善，但 MSU-MFSD 的 AUC/EER 未优于 Baseline。
+MixStyle 是已有正式方法名。本项目在 ResNet18 的 `layer1` 和 `layer2` 后插入 MixStyle，以 `p=0.5` 的概率混合 mini-batch 内样本的通道均值和标准差，混合系数服从 `Beta(0.1, 0.1)`；验证和测试阶段自动关闭。
+
+CASIA、Replay-Attack 有改善，但 MSU-MFSD 的 AUC/EER 未优于 Baseline。
 
 运行：
 
@@ -144,9 +152,9 @@ bash scripts/run_week3_appearance.sh
 bash scripts/run_week3_mixstyle.sh
 ```
 
-### 4. Fourier Amplitude Augmentation
+### 4. Fourier Amplitude Augmentation（项目轻量实现）
 
-训练阶段对同类别样本进行低频幅度谱混合，并保留原样本相位。当前实现为轻量 Fourier amplitude augmentation，不等同于完整复现某篇频域 FAS 方法。
+训练阶段对同类别样本进行低频幅度谱混合，并保留原样本相位和大部分高频幅度。默认 `p=0.5`、最大混合权重 `0.35`、低频区域比例 `0.10`。当前实现是本项目基于 Fourier 幅度扰动思想设计的轻量训练增强，不等同于完整复现某篇频域 FAS 方法。
 
 运行：
 
@@ -160,15 +168,17 @@ bash scripts/run_week3_fourier.sh
 bash scripts/run_week3_extra_methods.sh
 ```
 
+更完整的实现细节见 [`METHOD_IMPLEMENTATION.md`](METHOD_IMPLEMENTATION.md)。
+
 ### 第三周宏平均结果
 
 | 方法 | 平均 Accuracy | 平均 AUC | 平均 EER | 三域完整改善数 |
 |---|---:|---:|---:|---:|
 | Baseline | 45.7576% | 42.2235% | 55.3802% | - |
-| Strong | **59.5185%** | 46.9866% | 50.7384% | 1/3 |
-| Appearance | 50.5986% | 47.1715% | 51.7376% | 2/3 |
+| Strong Data Augmentation | **59.5185%** | 46.9866% | 50.7384% | 1/3 |
+| Appearance Randomization | 50.5986% | 47.1715% | 51.7376% | 2/3 |
 | MixStyle | 53.5927% | 46.5625% | 52.2578% | 2/3 |
-| Fourier | 58.4002% | **53.7558%** | **48.4219%** | **3/3** |
+| Fourier Amplitude Augmentation | 58.4002% | **53.7558%** | **48.4219%** | **3/3** |
 
 Fourier 是目前唯一在 CASIA、MSU-MFSD、Replay-Attack 三个目标域上均同时实现 Accuracy 上升、AUC 上升、EER 下降的方法，因此被选为当前推荐方案。
 
@@ -180,10 +190,10 @@ Fourier 是目前唯一在 CASIA、MSU-MFSD、Replay-Attack 三个目标域上�
 
 ```text
 Baseline
-Strong Augmentation
-Appearance Augmentation
+Strong Data Augmentation（项目自定义）
+Appearance Randomization（项目自定义）
 MixStyle
-Fourier Amplitude Augmentation
+Fourier Amplitude Augmentation（项目轻量实现）
 ```
 
 运行：
@@ -213,7 +223,7 @@ outputs_week4/
 
 第四周核心结论：
 
-- Strong 的三域平均 Accuracy 最高；
+- Strong Data Augmentation 的三域平均 Accuracy 最高；
 - Fourier 的三域平均 AUC 最高；
 - Fourier 的三域平均 EER 最低；
 - Fourier 是唯一三域都实现 Accuracy↑、AUC↑、EER↓ 的方法；
@@ -228,6 +238,7 @@ outputs_week4/
 ```text
 FAS/
 ├── README.md
+├── METHOD_IMPLEMENTATION.md
 ├── EXPERIMENT_RESULTS.md
 ├── WEEK3_REPORT.md
 ├── WEEK3_FINAL_REPORT.md
@@ -285,6 +296,8 @@ FAS/
 | GPU | `NVIDIA GeForce RTX 4090 D` |
 
 ## 十三、实验记录入口
+
+方法命名与实现细节：[`METHOD_IMPLEMENTATION.md`](METHOD_IMPLEMENTATION.md)
 
 完整实验结果总表：[`EXPERIMENT_RESULTS.md`](EXPERIMENT_RESULTS.md)
 
