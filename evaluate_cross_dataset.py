@@ -33,6 +33,7 @@ def main():
     ckpt = torch.load(args.checkpoint, map_location=device)
     ckpt_args = ckpt.get('args', {})
     source_dataset = args.source_dataset or ckpt_args.get('dataset', 'unknown_source')
+    method = ckpt_args.get('method', 'baseline')
 
     if source_dataset == args.dataset:
         print(f'[警告] source_dataset 与 target_dataset 相同：{source_dataset}。这不是跨数据集实验。')
@@ -47,7 +48,12 @@ def main():
         pin_memory=torch.cuda.is_available(),
     )
 
-    model = build_resnet18(pretrained=False).to(device)
+    model = build_resnet18(
+        pretrained=False,
+        mixstyle=(method == 'mixstyle'),
+        mixstyle_p=ckpt_args.get('mixstyle_p', 0.5),
+        mixstyle_alpha=ckpt_args.get('mixstyle_alpha', 0.1),
+    ).to(device)
     model.load_state_dict(ckpt['model'])
     model.eval()
     criterion = nn.CrossEntropyLoss()
@@ -73,6 +79,8 @@ def main():
     metrics['num_live'] = int(sum(y_true))
     metrics['num_spoof'] = int(len(y_true) - sum(y_true))
     metrics['checkpoint'] = str(args.checkpoint)
+    metrics['method'] = method
+    metrics['augmentation'] = ckpt_args.get('augmentation', 'baseline')
     metrics['protocol'] = 'source-only training; target-only testing; no target fine-tuning'
 
     with open(out / 'cross_dataset_summary.json', 'w', encoding='utf-8') as f:
@@ -81,6 +89,7 @@ def main():
     print('\n===== 跨数据集测试结果 =====')
     print(f'源数据集      : {source_dataset}')
     print(f'目标数据集    : {args.dataset}')
+    print(f'方法          : {method}')
     print(f'测试图像数量  : {len(ds)}')
     print(f'Accuracy      : {metrics["accuracy"]:.6f}')
     print(f'AUC           : {metrics["auc"]:.6f}')
