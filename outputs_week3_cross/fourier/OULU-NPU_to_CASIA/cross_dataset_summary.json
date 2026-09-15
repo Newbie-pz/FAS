@@ -1,0 +1,27 @@
+{
+  "accuracy": 0.336993699369937,
+  "auc": 0.3167632923424226,
+  "eer": 0.6458851660428919,
+  "eer_threshold": 0.6236999034881592,
+  "threshold": 0.5,
+  "confusion_matrix": [
+    [
+      3009,
+      6291
+    ],
+    [
+      1075,
+      735
+    ]
+  ],
+  "loss": 3.886504138771421,
+  "source_dataset": "OULU-NPU",
+  "target_dataset": "CASIA",
+  "num_images": 11110,
+  "num_live": 1810,
+  "num_spoof": 9300,
+  "checkpoint": "outputs_week3/fourier/OULU-NPU/best.pth",
+  "method": "fourier",
+  "augmentation": "baseline",
+  "protocol": "source-only training; target-only testing; no target fine-tuning"
+}

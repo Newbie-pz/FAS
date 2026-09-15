@@ -1,0 +1,27 @@
+{
+  "accuracy": 0.5658704121386098,
+  "auc": 0.48334808090094233,
+  "eer": 0.5114761195481146,
+  "eer_threshold": 0.015296855941414833,
+  "threshold": 0.5,
+  "confusion_matrix": [
+    [
+      9116,
+      2792
+    ],
+    [
+      5677,
+      1923
+    ]
+  ],
+  "loss": 2.286236550442772,
+  "source_dataset": "OULU-NPU",
+  "target_dataset": "Replay-Attack",
+  "num_images": 19508,
+  "num_live": 7600,
+  "num_spoof": 11908,
+  "checkpoint": "outputs_week3/mixstyle/OULU-NPU/best.pth",
+  "method": "mixstyle",
+  "augmentation": "baseline",
+  "protocol": "source-only training; target-only testing; no target fine-tuning"
+}

@@ -1,0 +1,25 @@
+{
+  "accuracy": 0.4007200720072007,
+  "auc": 0.383533594724648,
+  "eer": 0.5866497356383296,
+  "eer_threshold": 0.5563613772392273,
+  "threshold": 0.5,
+  "confusion_matrix": [
+    [
+      3664,
+      5636
+    ],
+    [
+      1022,
+      788
+    ]
+  ],
+  "loss": 2.97600601296721,
+  "source_dataset": "OULU-NPU",
+  "target_dataset": "CASIA",
+  "num_images": 11110,
+  "num_live": 1810,
+  "num_spoof": 9300,
+  "checkpoint": "outputs_week3/appearance/OULU-NPU/best.pth",
+  "protocol": "source-only training; target-only testing; no target fine-tuning"
+}

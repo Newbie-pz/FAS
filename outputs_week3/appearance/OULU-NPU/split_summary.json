@@ -1,0 +1,11 @@
+{
+  "dataset": "OULU-NPU",
+  "augmentation": "appearance",
+  "total_images": 69896,
+  "train_images": 48343,
+  "val_images": 10136,
+  "test_images": 11417,
+  "train_groups": 38,
+  "val_groups": 8,
+  "test_groups": 9
+}

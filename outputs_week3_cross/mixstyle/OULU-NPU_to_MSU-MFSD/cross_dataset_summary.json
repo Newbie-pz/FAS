@@ -1,0 +1,27 @@
+{
+  "accuracy": 0.6561333665090818,
+  "auc": 0.5933035625663182,
+  "eer": 0.42432084036939055,
+  "eer_threshold": 0.10327348113059998,
+  "threshold": 0.5,
+  "confusion_matrix": [
+    [
+      2234,
+      732
+    ],
+    [
+      650,
+      403
+    ]
+  ],
+  "loss": 1.2110238147333623,
+  "source_dataset": "OULU-NPU",
+  "target_dataset": "MSU-MFSD",
+  "num_images": 4019,
+  "num_live": 1053,
+  "num_spoof": 2966,
+  "checkpoint": "outputs_week3/mixstyle/OULU-NPU/best.pth",
+  "method": "mixstyle",
+  "augmentation": "baseline",
+  "protocol": "source-only training; target-only testing; no target fine-tuning"
+}

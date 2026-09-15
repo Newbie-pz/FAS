@@ -1,0 +1,10 @@
+{
+  "dataset": "OULU-NPU",
+  "total_images": 69896,
+  "train_images": 48887,
+  "val_images": 10497,
+  "test_images": 10512,
+  "train_groups": 3465,
+  "val_groups": 742,
+  "test_groups": 743
+}

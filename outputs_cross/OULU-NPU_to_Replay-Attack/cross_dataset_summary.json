@@ -1,0 +1,25 @@
+{
+  "accuracy": 0.48272503588271476,
+  "auc": 0.3918927843731768,
+  "eer": 0.5456287458232414,
+  "eer_threshold": 0.006059753242880106,
+  "threshold": 0.5,
+  "confusion_matrix": [
+    [
+      8268,
+      3640
+    ],
+    [
+      6451,
+      1149
+    ]
+  ],
+  "loss": 3.323977333760687,
+  "source_dataset": "OULU-NPU",
+  "target_dataset": "Replay-Attack",
+  "num_images": 19508,
+  "num_live": 7600,
+  "num_spoof": 11908,
+  "checkpoint": "outputs/OULU-NPU/best.pth",
+  "protocol": "source-only training; target-only testing; no target fine-tuning"
+}

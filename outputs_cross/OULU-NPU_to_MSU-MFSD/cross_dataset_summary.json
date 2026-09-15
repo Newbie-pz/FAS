@@ -1,0 +1,25 @@
+{
+  "accuracy": 0.609355561084847,
+  "auc": 0.6408053539993301,
+  "eer": 0.41681347132010205,
+  "eer_threshold": 0.2510690689086914,
+  "threshold": 0.5,
+  "confusion_matrix": [
+    [
+      1939,
+      1027
+    ],
+    [
+      543,
+      510
+    ]
+  ],
+  "loss": 1.5874619526066986,
+  "source_dataset": "OULU-NPU",
+  "target_dataset": "MSU-MFSD",
+  "num_images": 4019,
+  "num_live": 1053,
+  "num_spoof": 2966,
+  "checkpoint": "outputs/OULU-NPU/best.pth",
+  "protocol": "source-only training; target-only testing; no target fine-tuning"
+}

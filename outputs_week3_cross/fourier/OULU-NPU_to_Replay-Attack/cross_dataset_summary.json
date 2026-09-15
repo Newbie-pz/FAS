@@ -1,0 +1,27 @@
+{
+  "accuracy": 0.6620873487799877,
+  "auc": 0.6384479087477679,
+  "eer": 0.41099462104202394,
+  "eer_threshold": 0.033450473099946976,
+  "threshold": 0.5,
+  "confusion_matrix": [
+    [
+      9477,
+      2431
+    ],
+    [
+      4161,
+      3439
+    ]
+  ],
+  "loss": 1.8721947248949486,
+  "source_dataset": "OULU-NPU",
+  "target_dataset": "Replay-Attack",
+  "num_images": 19508,
+  "num_live": 7600,
+  "num_spoof": 11908,
+  "checkpoint": "outputs_week3/fourier/OULU-NPU/best.pth",
+  "method": "fourier",
+  "augmentation": "baseline",
+  "protocol": "source-only training; target-only testing; no target fine-tuning"
+}

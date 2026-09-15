@@ -1,0 +1,17 @@
+{
+  "accuracy": 1.0,
+  "auc": 1.0,
+  "eer": 0.0,
+  "eer_threshold": 0.9998917579650879,
+  "threshold": 0.5,
+  "confusion_matrix": [
+    [
+      6889,
+      0
+    ],
+    [
+      0,
+      3623
+    ]
+  ]
+}
