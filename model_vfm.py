@@ -21,14 +21,24 @@ class DINOv2FAS(nn.Module):
         self.feature_mode = feature_mode
 
         if dinov2_repo:
-            repo = str(Path(dinov2_repo).expanduser().resolve())
+            repo = Path(dinov2_repo).expanduser().resolve()
+        else:
+            # torch.hub normally contacts GitHub even when the repo is already cached.
+            # Prefer the local DINOv2 cache so repeated experiments are network-independent.
+            hub_dir = Path(torch.hub.get_dir())
+            cached_repo = hub_dir / "facebookresearch_dinov2_main"
+            repo = cached_repo if cached_repo.exists() else None
+
+        if repo is not None:
+            print(f"[DINOv2] Using local Torch Hub repo: {repo}")
             self.backbone = torch.hub.load(
-                repo,
+                str(repo),
                 model_name,
                 source="local",
                 pretrained=pretrained,
             )
         else:
+            print("[DINOv2] Local cache not found; loading from GitHub.")
             self.backbone = torch.hub.load(
                 "facebookresearch/dinov2",
                 model_name,
