@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 import torch
 import torch.nn as nn
-from sklearn.metrics import roc_auc_score
+import torch.nn.functional as F
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
@@ -24,6 +24,27 @@ from vfm_data import (
     scan_vfm_domain,
     split_train_val_by_group,
 )
+
+
+
+class FocalLoss(nn.Module):
+    """Binary/multiclass focal loss over logits with optional label smoothing."""
+
+    def __init__(self, gamma=2.0, label_smoothing=0.0):
+        super().__init__()
+        self.gamma = float(gamma)
+        self.label_smoothing = float(label_smoothing)
+
+    def forward(self, logits, target):
+        ce = F.cross_entropy(
+            logits,
+            target,
+            reduction="none",
+            label_smoothing=self.label_smoothing,
+        )
+        pt = torch.exp(-ce)
+        loss = ((1.0 - pt) ** self.gamma) * ce
+        return loss.mean()
 
 
 def parse_args():
@@ -48,7 +69,9 @@ def parse_args():
     p.add_argument("--backbone_lr", type=float, default=1e-5)
     p.add_argument("--head_lr", type=float, default=2e-4)
     p.add_argument("--weight_decay", type=float, default=0.05)
-    p.add_argument("--label_smoothing", type=float, default=0.05)
+    p.add_argument("--label_smoothing", type=float, default=0.0)
+    p.add_argument("--loss", choices=["ce", "focal"], default="focal")
+    p.add_argument("--focal_gamma", type=float, default=2.0)
     p.add_argument("--warmup_ratio", type=float, default=0.05)
     p.add_argument("--patience", type=int, default=5)
     p.add_argument("--val_ratio", type=float, default=0.10)
@@ -322,7 +345,13 @@ def main():
         freeze_first_blocks=args.freeze_first_blocks,
     ).to(device)
 
-    criterion = nn.CrossEntropyLoss(label_smoothing=args.label_smoothing)
+    if args.loss == "focal":
+        criterion = FocalLoss(
+            gamma=args.focal_gamma,
+            label_smoothing=args.label_smoothing,
+        )
+    else:
+        criterion = nn.CrossEntropyLoss(label_smoothing=args.label_smoothing)
     optimizer = make_optimizer(model, args)
     updates_per_epoch = math.ceil(len(train_loader) / args.grad_accum)
     scheduler = build_scheduler(
@@ -351,6 +380,8 @@ def main():
             ).items()
         },
         "sampler": "domain-class balanced weighted sampling",
+        "loss": args.loss,
+        "focal_gamma": args.focal_gamma if args.loss == "focal" else None,
         "max_train_frames_per_video": args.max_train_frames_per_video,
         "max_val_frames_per_video": args.max_val_frames_per_video,
     }
