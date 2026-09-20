@@ -71,13 +71,28 @@ class DINOv2FAS(nn.Module):
         return self.classifier(self.extract_features(x))
 
     def freeze_first_blocks(self, n):
-        """Optionally freeze early transformer blocks while keeping later blocks trainable."""
+        """Freeze the whole DINOv2 backbone, then unfreeze blocks from index n onward.
+
+        For ViT-B/14 (12 blocks), n=11 means only the final encoder block is
+        trainable. Patch embedding, positional/class/register tokens and the
+        remaining backbone parameters stay frozen, preserving pretrained
+        representations for cross-domain generalization.
+        """
         n = max(0, int(n))
         blocks = list(self.backbone.blocks)
+
+        if n <= 0:
+            for p in self.backbone.parameters():
+                p.requires_grad = True
+            return
+
+        for p in self.backbone.parameters():
+            p.requires_grad = False
+
         for i, block in enumerate(blocks):
-            requires_grad = i >= n
-            for p in block.parameters():
-                p.requires_grad = requires_grad
+            if i >= n:
+                for p in block.parameters():
+                    p.requires_grad = True
 
 
 def build_dinov2_fas(
