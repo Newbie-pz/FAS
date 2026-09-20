@@ -237,6 +237,30 @@ improvement_heatmap.png
 
 第四周报告：[`WEEK4_REPORT.md`](WEEK4_REPORT.md)
 
+## 九点五、高性能跨域路线：DINOv2-Reg + Multi-source DG
+
+在保留原有单源 ResNet18 压力测试的基础上，仓库新增一条以效果为优先的多源域泛化路线。该路线采用 **DINOv2 ViT-B/14 with Registers**，按照 MICO 风格将三个数据集作为源域、一个数据集作为完全未见目标域，并增加：
+
+- Domain × Class balanced sampling；
+- 每视频均匀抽取训练帧，减少连续帧冗余；
+- DINOv2-Reg 全量微调；
+- CLS token + mean patch token 联合分类；
+- source validation 保持 Subject-disjoint；
+- 使用 Video-level AUC 选择最佳 checkpoint；
+- 目标域同时报告 Frame-level 与 Video-level Accuracy / AUC / EER。
+
+代码入口：
+
+```bash
+TARGETS="CASIA" GPU=0 bash scripts/run_week2_vfm_mico.sh
+```
+
+首次建议先测试最困难的 CASIA；确认效果后再运行三个目标域。
+
+完整技术说明见 `VFM_HIGH_PERFORMANCE.md`。
+
+> 注意：该路线属于多源 MICO-style DG，与前面的单源 OULU → Target ResNet18 实验不是同一训练协议，因此保留为独立高性能实验，不直接覆盖旧实验结论。
+
 ## 十、项目结构
 
 ```text
