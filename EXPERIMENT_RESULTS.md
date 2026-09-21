@@ -88,115 +88,110 @@ OULU-NPU 使用自定义 Subject-disjoint 70/15/15 划分。
 
 ---
 
-## 第三周：泛化增强方法探索
+## 第三周：Frozen DINOv2-Reg 多源域泛化
 
-第三周保持 ResNet18、OULU-NPU 源域训练、Subject-disjoint 划分和 Source-only 评价协议不变，比较：
+第三周最终阶段从早期 ResNet18 数据增强探索转向 DINOv2-Reg + Multi-source DG。早期 Strong Data Augmentation、Appearance Randomization、MixStyle、Fourier Amplitude Augmentation 结果仍保留在历史报告中，但第三周最终主结果以 Frozen DINOv2-Reg 为准。
 
-1. **Strong Data Augmentation（项目自定义）**；
-2. **Appearance Randomization（项目自定义）**；
-3. **MixStyle**；
-4. **Fourier Amplitude Augmentation（项目轻量实现）**。
+### 3.1 统一方法对比
 
-### 3.1 同域结果
+| 方法 | CASIA Video AUC | MSU-MFSD Video AUC | Replay-Attack Video AUC | 平均 Video AUC |
+|---|---:|---:|---:|---:|
+| Multi-source DG + ResNet18 | 49.39% | 71.10% | 63.95% | 61.48% |
+| DINOv2-Reg + Multi-source DG | 67.81% | 87.97% | 85.87% | 80.55% |
+| DINOv2-Reg + SSDG-style | 75.06% | 91.29% | 79.11% | 81.82% |
+| FAS-TD-SF-inspired | 72.69% | 65.47% | 73.35% | 70.50% |
+| **Frozen DINOv2-Reg** | **81.32%** | **89.01%** | **82.78%** | **84.37%** |
 
-| 方法 | OULU-NPU Accuracy | OULU-NPU AUC | OULU-NPU EER |
+### 3.2 第三周最终主结果
+
+最终方法：**Frozen DINOv2-Reg Multi-source DG**
+
+| Target | Frame AUC | Video AUC | Video EER |
 |---|---:|---:|---:|
-| Baseline | 99.8161% | 99.9999% | 0.0526% |
-| Strong Data Augmentation | 95.3052% | 99.9971% | 0.2104% |
-| Appearance Randomization | 97.4074% | 99.9624% | 1.0721% |
-| MixStyle | 98.5898% | 99.9914% | 0.5920% |
-| Fourier Amplitude Augmentation | 98.5373% | 99.9715% | 0.8814% |
+| CASIA | 80.51% | **81.32%** | 23.26% |
+| MSU-MFSD | 88.22% | **89.01%** | 19.52% |
+| Replay-Attack | 82.12% | **82.78%** | 27.45% |
+| **Average** | - | **84.37%** | **23.41%** |
 
-### 3.2 跨数据集结果
+### 3.3 Tuning-depth diagnostic
 
-#### CASIA
+| 配置 | CASIA | MSU-MFSD | Replay-Attack | 平均 Video AUC |
+|---|---:|---:|---:|---:|
+| DINO freeze=10 | 71.33% | 89.42% | 84.10% | 81.62% |
+| DINO freeze=11 | 67.81% | 87.97% | 85.87% | 80.55% |
+| DINO freeze=12 | **81.32%** | **89.01%** | 82.78% | **84.37%** |
 
-| 方法 | Accuracy | AUC | EER |
-|---|---:|---:|---:|
-| Baseline | 28.0648% | 23.4007% | 69.8964% |
-| Strong Data Augmentation | **61.2061%** | **41.9301%** | **55.6456%** |
-| Appearance Randomization | 40.0720% | 38.3534% | 58.6650% |
-| MixStyle | 38.5779% | 32.0224% | 63.1936% |
-| Fourier Amplitude Augmentation | 33.6994% | 31.6763% | 64.5885% |
+需要注意：历史 freeze=10/11/12 运行的 backbone learning rate 并不完全一致，因此这里记录为 tuning-depth diagnostic，而不是严格控制变量的消融实验。
 
-#### MSU-MFSD
+### 3.4 SSDG-style 参数敏感性
 
-| 方法 | Accuracy | AUC | EER |
-|---|---:|---:|---:|
-| Baseline | 60.9356% | 64.0805% | 41.6813% |
-| Strong Data Augmentation | 68.2259% | 60.1555% | 41.6844% |
-| Appearance Randomization | 56.2080% | 56.6613% | 45.4044% |
-| MixStyle | 65.6133% | 59.3304% | 42.4321% |
-| Fourier Amplitude Augmentation | **75.2924%** | **65.7463%** | **39.5778%** |
+| Variant | CASIA | MSU-MFSD | Replay-Attack | Mean Video AUC |
+|---|---:|---:|---:|---:|
+| ssdg_f11_ad02_tri10 | 72.03% | 91.70% | 78.08% | 80.60% |
+| ssdg_f11_ad01_tri05 | 74.99% | 91.27% | 78.33% | 81.53% |
+| ssdg_f10_ad02_tri05 | 68.04% | 91.65% | 79.47% | 79.72% |
+| ssdg_f12_ad02_tri05 | **83.43%** | **92.38%** | 71.14% | 82.32% |
 
-#### Replay-Attack
+### 3.5 融合分析
 
-| 方法 | Accuracy | AUC | EER |
-|---|---:|---:|---:|
-| Baseline | 48.2725% | 39.1893% | 54.5629% |
-| Strong Data Augmentation | 49.1234% | 38.8743% | 54.8851% |
-| Appearance Randomization | 55.5157% | 46.4997% | 51.1434% |
-| MixStyle | 56.5870% | 48.3348% | 51.1476% |
-| Fourier Amplitude Augmentation | **66.2087%** | **63.8448%** | **41.0995%** |
+- Probability Mean：平均 Video AUC 83.26%，平均 Video EER 25.19%；
+- Video Stability：平均 Video AUC 83.16%，平均 Video EER 23.70%；
+- Video Reliability：平均 Video AUC 82.66%，平均 Video EER 23.59%。
 
-### 3.3 三个目标域宏平均
-
-| 方法 | 名称性质 | 平均 Accuracy | 平均 AUC | 平均 EER |
-|---|---|---:|---:|---:|
-| Baseline | 项目基础配置 | 45.7576% | 42.2235% | 55.3802% |
-| Strong Data Augmentation | 项目自定义 | **59.5185%** | 46.9866% | 50.7384% |
-| Appearance Randomization | 项目自定义 | 50.5986% | 47.1715% | 51.7376% |
-| MixStyle | 已有正式方法名；本项目轻量集成 | 53.5927% | 46.5625% | 52.2578% |
-| Fourier Amplitude Augmentation | 项目轻量频域实现 | 58.4002% | **53.7558%** | **48.4219%** |
-
-### 3.4 三域一致性
-
-| 方法 | CASIA | MSU-MFSD | Replay-Attack | 完整改善数量 |
-|---|---|---|---|---:|
-| Strong Data Augmentation | 是 | 否 | 否 | 1/3 |
-| Appearance Randomization | 是 | 否 | 是 | 2/3 |
-| MixStyle | 是 | 否 | 是 | 2/3 |
-| Fourier Amplitude Augmentation | **是** | **是** | **是** | **3/3** |
-
-Fourier 是目前唯一在三个未见目标域上均同时实现 Accuracy 上升、AUC 上升和 EER 下降的方法。
-
-### 3.5 Fourier 相对 Baseline 的提升
-
-| 目标域 | Accuracy 提升 | AUC 提升 | EER 降低 |
-|---|---:|---:|---:|
-| CASIA | +5.6346 pp | +8.2756 pp | 5.3079 pp |
-| MSU-MFSD | +14.3568 pp | +1.6658 pp | 2.1035 pp |
-| Replay-Attack | +17.9362 pp | +24.6555 pp | 13.4634 pp |
-
-三域宏平均相对 Baseline：Accuracy +12.6425 pp，AUC +11.5323 pp，EER 降低 6.9583 pp。
+融合方案没有超过 Frozen DINOv2-Reg 单模型的 84.37% 平均 Video AUC。
 
 详细分析见 [`WEEK3_FINAL_REPORT.md`](WEEK3_FINAL_REPORT.md)。
 
 ---
 
-## 第四周：统一对比、消融式分析与可视化
+## 第四周：统一对比、消融式诊断与可视化
 
-第四周统一分析 Baseline、Strong Data Augmentation、Appearance Randomization、MixStyle 和 Fourier Amplitude Augmentation 五组实验。
+第四周不再训练新的第三周主模型，而是基于已有结果进行统一整理。
 
-正式输出目录：[`outputs_week4/`](outputs_week4/)
+### 4.1 最终统一结果
 
-主要文件：
+| 方法 | CASIA | MSU-MFSD | Replay-Attack | 平均 Video AUC | 平均 Video EER |
+|---|---:|---:|---:|---:|---:|
+| Multi-source DG + ResNet18 | 49.39% | 71.10% | 63.95% | 61.48% | 42.47% |
+| DINOv2-Reg + Multi-source DG | 67.81% | 87.97% | 85.87% | 80.55% | 29.20% |
+| DINOv2-Reg + SSDG-style | 75.06% | 91.29% | 79.11% | 81.82% | 26.64% |
+| FAS-TD-SF-inspired | 72.69% | 65.47% | 73.35% | 70.50% | 36.72% |
+| **Frozen DINOv2-Reg** | **81.32%** | 89.01% | 82.78% | **84.37%** | **23.41%** |
 
-- `week4_all_results.csv`：五种方法全部同域/跨域指标；
-- `week4_macro_summary.csv`：三个目标域宏平均；
-- `week4_domain_best.csv`：各目标域最优方法；
-- `week4_analysis.md`：自动结果分析；
-- `accuracy_comparison.png` / `auc_comparison.png` / `eer_comparison.png`；
-- `macro_accuracy.png` / `macro_auc.png` / `macro_eer.png`；
-- `improvement_heatmap.png`。
+### 4.2 第四周分析资产
 
-第四周核心结论：
+统一分析脚本：
 
-- Strong Data Augmentation 的三域平均 Accuracy 最高，为 59.5185%；
-- Fourier 的三域平均 AUC 最高，为 53.7558%；
-- Fourier 的三域平均 EER 最低，为 48.4219%；
-- Fourier 是唯一在三个目标域上都同时实现 Accuracy↑、AUC↑、EER↓ 的方法；
-- 因此 Fourier 是当前项目跨域改善一致性最好的推荐方案。
+```bash
+bash scripts/run_week4_unified_analysis.sh
+```
+
+生成：
+
+```text
+outputs_week4_analysis/
+├── week4_summary.md
+├── week4_method_comparison.csv
+├── 01_method_comparison_video_auc.png
+├── 02_method_mean_video_auc.png
+├── 03_tuning_depth_comparison.png
+├── 04_ssdg_parameter_sensitivity.png
+├── 05_fusion_mean_video_auc.png
+├── 06_source_target_generalization_gap.png
+├── 06_final_model_video_roc.png
+├── 07_confusion_CASIA.png
+├── 07_confusion_MSU-MFSD.png
+└── 07_confusion_Replay-Attack.png
+```
+
+### 4.3 第四周核心结论
+
+- DINOv2-Reg 是跨域性能提升的主要来源；
+- 完全冻结 backbone 在当前协议下得到最高三域平均 Video AUC；
+- SSDG-style 的收益具有明显 target dependence；
+- Probability Mean 融合最高达到 83.26%，仍低于 Frozen DINOv2-Reg；
+- Source validation AUC 接近 100% 并不代表未知域性能同样优秀；
+- 最终主结果固定为 **Frozen DINOv2-Reg，Mean Video AUC = 84.37%**。
 
 详细见 [`WEEK4_REPORT.md`](WEEK4_REPORT.md)。
 
