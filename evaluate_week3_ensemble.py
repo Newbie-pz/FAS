@@ -6,7 +6,6 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from scipy.stats import rankdata
 from torch.utils.data import DataLoader
 
 from metrics import save_plots_and_metrics
@@ -77,10 +76,14 @@ def infer(model, loader, device, use_amp, use_tta):
 
 
 def rank01(x):
+    """Convert scores to [0, 1] ranks without using labels."""
+    x = np.asarray(x, dtype=np.float64)
     if len(x) <= 1:
         return np.zeros_like(x, dtype=np.float64)
-    r = rankdata(x, method="average")
-    return (r - 1.0) / (len(r) - 1.0)
+    order = np.argsort(x, kind="mergesort")
+    ranks = np.empty(len(x), dtype=np.float64)
+    ranks[order] = np.arange(len(x), dtype=np.float64)
+    return ranks / (len(x) - 1.0)
 
 
 def evaluate_scores(labels, scores, videos, out, prefix):
