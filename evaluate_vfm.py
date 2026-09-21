@@ -28,6 +28,7 @@ def parse_args():
     p.add_argument("--num_workers", type=int, default=8)
     p.add_argument("--dinov2_repo", default=None)
     p.add_argument("--no_amp", action="store_true")
+    p.add_argument("--tta", action="store_true", help="Average original and horizontal-flip predictions.")
     return p.parse_args()
 
 
@@ -85,7 +86,11 @@ def main():
                 enabled=use_amp,
             ):
                 logits = model(x)
-            probs = torch.softmax(logits.float(), dim=1)[:, 1]
+                probs = torch.softmax(logits.float(), dim=1)[:, 1]
+                if args.tta:
+                    logits_flip = model(torch.flip(x, dims=[3]))
+                    probs_flip = torch.softmax(logits_flip.float(), dim=1)[:, 1]
+                    probs = 0.5 * (probs + probs_flip)
 
             y_true.extend(y.tolist())
             y_score.extend(probs.cpu().tolist())
@@ -132,6 +137,7 @@ def main():
         "frame_metrics": frame_metrics,
         "video_metrics": video_metrics,
         "checkpoint": args.checkpoint,
+        "tta": "original+horizontal_flip" if args.tta else "none",
     }
     (out / "vfm_summary.json").write_text(
         json.dumps(summary, indent=2, ensure_ascii=False),
@@ -149,6 +155,7 @@ def main():
     print(f"Frame EER       : {frame_metrics['eer']:.6f}")
     print(f"VIDEO AUC       : {video_metrics['auc']:.6f}")
     print(f"VIDEO EER       : {video_metrics['eer']:.6f}")
+    print(f"TTA             : {'on' if args.tta else 'off'}")
     print(f"Output          : {out}")
     print("=" * 72)
 
