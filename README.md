@@ -163,103 +163,85 @@ bash scripts/run_week2_cross_dataset.sh
 
 第二周报告：[`WEEK2_REPORT.md`](WEEK2_REPORT.md)
 
-## 八、第三周：泛化增强方法
+## 八、第三周：Frozen DINOv2-Reg 多源域泛化
 
-第三周在相同骨干、源数据和评价协议下测试四种泛化增强策略。
+第三周在早期 ResNet18 数据增强探索基础上，转向 DINOv2-Reg + Multi-source DG 高性能路线。
 
-### 1. Strong Data Augmentation（项目自定义）
+统一采用 3 个源域训练、1 个完全未见目标域测试的 MICO-style DG 设置。目标域不参与训练、验证、模型选择或融合权重调节。
 
-代码：`--augmentation strong`。组合随机尺度裁切、较强颜色扰动、灰度化、模糊和 Random Erasing。CASIA 提升明显，但 MSU-MFSD 和 Replay-Attack 的 AUC/EER 改善不稳定。
+主要结果：
 
-### 2. Appearance Randomization（项目自定义；旧称 Appearance Augmentation）
-
-代码：`--augmentation appearance`。重点随机化颜色、亮度、对比度、灰度、自动对比度、模糊和锐度，同时不使用 RandomResizedCrop 和 RandomErasing。CASIA 和 Replay-Attack 有改善，但 MSU-MFSD 退化。
-
-### 3. MixStyle
-
-本项目在 ResNet18 `layer1` 和 `layer2` 后插入 MixStyle，以 `p=0.5` 的概率混合 mini-batch 内样本的通道均值和标准差，混合系数服从 `Beta(0.1, 0.1)`；验证和测试阶段关闭。
-
-### 4. Fourier Amplitude Augmentation（项目轻量实现）
-
-训练阶段在同类别样本之间混合低频幅度谱并保留源相位。默认 `p=0.5`、最大混合权重 `0.35`、低频区域比例 `0.10`。
-
-详细实现见 [`METHOD_IMPLEMENTATION.md`](METHOD_IMPLEMENTATION.md)。
-
-### 第三周宏平均结果
-
-| 方法 | 平均 Accuracy | 平均 AUC | 平均 EER | 三域完整改善数 |
+| 方法 | CASIA | MSU-MFSD | Replay-Attack | 平均 Video AUC |
 |---|---:|---:|---:|---:|
-| Baseline | 45.7576% | 42.2235% | 55.3802% | - |
-| Strong Data Augmentation | **59.5185%** | 46.9866% | 50.7384% | 1/3 |
-| Appearance Randomization | 50.5986% | 47.1715% | 51.7376% | 2/3 |
-| MixStyle | 53.5927% | 46.5625% | 52.2578% | 2/3 |
-| Fourier Amplitude Augmentation | 58.4002% | **53.7558%** | **48.4219%** | **3/3** |
+| Multi-source DG + ResNet18 | 49.39% | 71.10% | 63.95% | 61.48% |
+| DINOv2-Reg + Multi-source DG | 67.81% | 87.97% | 85.87% | 80.55% |
+| DINOv2-Reg + SSDG-style | 75.06% | 91.29% | 79.11% | 81.82% |
+| FAS-TD-SF-inspired | 72.69% | 65.47% | 73.35% | 70.50% |
+| **Frozen DINOv2-Reg** | **81.32%** | **89.01%** | **82.78%** | **84.37%** |
 
-Fourier 是目前唯一在 CASIA、MSU-MFSD、Replay-Attack 三个目标域上均同时实现 Accuracy 上升、AUC 上升、EER 下降的方法。
+最终第三周主模型为 **Frozen DINOv2-Reg Multi-source DG**，平均 Video AUC 为 **84.37%**，平均 Video EER 为 **23.41%**。
 
-第三周报告：[`WEEK3_FINAL_REPORT.md`](WEEK3_FINAL_REPORT.md)
+冻结深度诊断显示，完全冻结 12 个 DINOv2 Transformer blocks 比解冻高层 block 的配置更稳定。多个可训练配置的 Source validation AUC 接近 100%，但未知域性能反而更低，说明源域拟合能力与跨域泛化能力并不等价。
 
-## 九、第四周：统一对比、消融式分析与可视化
+第三周最终报告：[`WEEK3_FINAL_REPORT.md`](WEEK3_FINAL_REPORT.md)
 
-第四周统一分析：Baseline、Strong Data Augmentation、Appearance Randomization、MixStyle、Fourier Amplitude Augmentation。
+> 早期 Strong Data Augmentation、Appearance Randomization、MixStyle、Fourier Amplitude Augmentation 等 ResNet18 探索仍保留在 [`WEEK3_REPORT.md`](WEEK3_REPORT.md) 和历史实验记录中，但不再作为第三周最终主结果。
+
+## 九、第四周：统一对比、消融式诊断与可视化
+
+第四周不再继续训练新的第三周主模型，而是围绕现有结果进行统一整理和分析，包括：
+
+- 统一方法对比；
+- DINOv2 tuning-depth diagnostic；
+- SSDG-style 参数敏感性；
+- DINO + SSDG 融合策略分析；
+- Source validation 与 unseen target 泛化差距；
+- 最终模型 Video-level ROC；
+- CASIA / MSU-MFSD / Replay-Attack 混淆矩阵。
 
 运行：
 
 ```bash
-bash scripts/run_week4_analysis.sh
+bash scripts/run_week4_unified_analysis.sh
 ```
 
-输出目录：[`outputs_week4/`](outputs_week4/)
-
-核心产物：
+输出目录：
 
 ```text
-week4_all_results.csv
-week4_macro_summary.csv
-week4_domain_best.csv
-week4_analysis.md
-accuracy_comparison.png
-auc_comparison.png
-eer_comparison.png
-macro_accuracy.png
-macro_auc.png
-macro_eer.png
-improvement_heatmap.png
+outputs_week4_analysis/
+├── week4_summary.md
+├── week4_method_comparison.csv
+├── 01_method_comparison_video_auc.png
+├── 02_method_mean_video_auc.png
+├── 03_tuning_depth_comparison.png
+├── 04_ssdg_parameter_sensitivity.png
+├── 05_fusion_mean_video_auc.png
+├── 06_source_target_generalization_gap.png
+├── 06_final_model_video_roc.png
+├── 07_confusion_CASIA.png
+├── 07_confusion_MSU-MFSD.png
+└── 07_confusion_Replay-Attack.png
 ```
+
+第四周统一结果：
+
+| 方法 | CASIA | MSU-MFSD | Replay-Attack | 平均 Video AUC | 平均 Video EER |
+|---|---:|---:|---:|---:|---:|
+| Multi-source DG + ResNet18 | 49.39% | 71.10% | 63.95% | 61.48% | 42.47% |
+| DINOv2-Reg + Multi-source DG | 67.81% | 87.97% | 85.87% | 80.55% | 29.20% |
+| DINOv2-Reg + SSDG-style | 75.06% | 91.29% | 79.11% | 81.82% | 26.64% |
+| FAS-TD-SF-inspired | 72.69% | 65.47% | 73.35% | 70.50% | 36.72% |
+| **Frozen DINOv2-Reg** | **81.32%** | 89.01% | 82.78% | **84.37%** | **23.41%** |
 
 核心结论：
 
-- Strong Data Augmentation 的三域平均 Accuracy 最高；
-- Fourier 的三域平均 AUC 最高；
-- Fourier 的三域平均 EER 最低；
-- Fourier 是唯一三域都实现 Accuracy↑、AUC↑、EER↓ 的方法；
-- CASIA 上 Fourier 的绝对 AUC 仍低于 0.5，因此应表述为“稳定改善跨域泛化”，不能表述为“已经解决跨域泛化”。
+- DINOv2-Reg 相比 ResNet18 显著提升跨域性能；
+- 完全冻结 DINOv2 主干在当前协议下得到最佳三域平均 AUC；
+- SSDG-style 在 CASIA/MSU-MFSD 上有效，但 Replay-Attack 退化明显；
+- 概率融合最高平均 AUC 为 83.26%，仍低于 Frozen DINOv2-Reg；
+- Source validation 接近 100% 并不代表未知域性能同样优秀。
 
 第四周报告：[`WEEK4_REPORT.md`](WEEK4_REPORT.md)
-
-## 九点五、高性能跨域路线：DINOv2-Reg + Multi-source DG
-
-在保留原有单源 ResNet18 压力测试的基础上，仓库新增一条以效果为优先的多源域泛化路线。该路线采用 **DINOv2 ViT-B/14 with Registers**，按照 MICO 风格将三个数据集作为源域、一个数据集作为完全未见目标域，并增加：
-
-- Domain × Class balanced sampling；
-- 每视频均匀抽取训练帧，减少连续帧冗余；
-- DINOv2-Reg 全量微调；
-- CLS token + mean patch token 联合分类；
-- source validation 保持 Subject-disjoint；
-- 使用 Video-level AUC 选择最佳 checkpoint；
-- 目标域同时报告 Frame-level 与 Video-level Accuracy / AUC / EER。
-
-代码入口：
-
-```bash
-TARGETS="CASIA" GPU=0 bash scripts/run_week2_vfm_mico.sh
-```
-
-首次建议先测试最困难的 CASIA；确认效果后再运行三个目标域。
-
-完整技术说明见 `VFM_HIGH_PERFORMANCE.md`。
-
-> 注意：该路线属于多源 MICO-style DG，与前面的单源 OULU → Target ResNet18 实验不是同一训练协议，因此保留为独立高性能实验，不直接覆盖旧实验结论。
 
 ## 十、项目结构
 
